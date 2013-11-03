@@ -18,15 +18,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-
-import re
-import sys
-
-import chimera.core.log
-import logging
-log = logging.getLogger(__name__)
-
-from types import StringType
+import urlparse
+import types
+import string
 
 from chimera.core.exceptions import InvalidLocationException
 
@@ -34,121 +28,62 @@ from chimera.core.exceptions import InvalidLocationException
 class Location(object):
     """
     Location represents an specific resource available on the system.
-    This location is the resource address onthe system.
+    Location is the resource address on the system.
 
     Location objects are immutable, so please, respect this or hash operations
     will fail.
     """
 
-    if sys.version_info[0:2] >= (2,5):
-        _re = re.compile('^(?P<host>[\w.]+)?(?(host)(?P<sep>:))?(?(sep)(?P<port>[\d]+))/+(?P<class>[\w]*)/+(?P<name>[\w]*)(?P<sep2>\??)?(?(sep2)(?P<config>[\w\S\s=,]*))')
-    else:
-        _re = re.compile('^(?P<host>[\w.]+)?(?P<port>:[\d]+)?/+(?P<class>[\w]*)/+(?P<name>[\w]*)(?P<config>\?[\w\S\s=,]+)?')
+    host = None
+    port = None
+    cls  = ""
+    name = ""
 
-    def __init__(self, location = None, **options):
-
-        self._host   = None
-        self._port   = None
-        self._class  = None
-        self._name   = None
-        self._config = None
-
+    def __init__(self, location = None, host = None, port=None, cls=None, name=None):
         # simple string
-        if isinstance(location, StringType):
-            (self._host, self._port, self._class, self._name, self._config) = self.parse(location)
-            if not self._host and options.has_key("host"):
-                if options["host"]: self._host=options["host"]
-            if not self._port and options.has_key("port"):
-                if options["port"]: self._port=options["port"]
+        if isinstance(location, types.StringType):
+            parse_result = urlparse.urlparse(location)
+            self.host = parse_result.hostname
+            self.port = parse_result.port
+
+            clsname = parse_result.path.strip().split("/")
+            if len(clsname) == 3:
+                _, self.cls, self.name = clsname
 
         # copy constructor
         elif isinstance(location, Location):
-            self._host   = location.host
-            self._port   = location.port
-            self._class  = location.cls
-            self._name   = location.name
-            self._config = location.config
+            self.host = location.host
+            self.port = location.port
+            self.cls  = location.cls
+            self.name = location.name
 
         # from dict
         else:
-            # get from options dict (cls, name, config)
-            l = "/%s/%s" % (options.get('cls', ''), options.get('name', ''))
+            self.host = host
+            self.port = port
+            self.cls = cls
+            self.name = name
 
-            _, __, self._class, self._name, ___ = self.parse(l)
+        if not self.cls or not self.name:
+            raise InvalidLocationException("Location must have class and name.")
 
-            self._config = options.get('config', {})
-            self._host = options.get('host', None)
-            self._port = options.get('port', None)
-
-            if self._port:
-                try:
-                    self._port = int(self._port)
-                except ValueError:
-                    raise InvalidLocationException("Invalid location, port should be an "
-                                                   "integer not a %s (%s)." % (type(self._port), self._port))
-            
-    host    = property(lambda self: self._host)
-    port    = property(lambda self: self._port)
-    cls     = property(lambda self: self._class)
-    name    = property(lambda self: self._name)
-    config  = property(lambda self: self._config)
-
-    def parse(self, location):
-
-        m = self._re.search(location)
-
-        if not m:
-            raise InvalidLocationException("Cannot parse '%s' as a valid location." % location)
-
-        matches = m.groupdict()
-
-        conf = {}
-
-        if matches["config"]:
-
-            # FIXME? py2.4 hack
-            if matches["config"][0] == "?":
-                matches["config"] = matches["config"][1:]
-
-            for opt in matches['config'].split(","):
-                try:
-                    k, v = opt.split("=")
-                    conf[k.strip()] = v.strip()
-                except ValueError:
-                    # split returned less/more than 2 srings
-                    raise InvalidLocationException("Cannot parse '%s' as a valid location. "
-                                                   "Invalid config dict: '%s'" % (location, matches['config']))
-
-        port = matches['port']
-        if port:
-            # don't expect ValueError because RE already check this
-            port = int(port)
-
-        if not matches['name']:
-            raise InvalidLocationException("Invalid location name (must be non-blank).")
-        
-        if not matches['class']:
-            raise InvalidLocationException("Invalid location class name (must be non-blank).")
-
-        return (matches['host'], port, matches['class'], matches['name'], conf)
+        if self.port is not None and type(self.port) != types.IntType:
+            raise InvalidLocationException("Location port must be an integer.")
 
     def __eq__(self, loc):
+        if not isinstance(loc, Location):
+            loc = Location(loc)
 
-        if not isinstance (loc, Location):
-            loc = Location (loc)
-
-        return (loc.cls.lower() == self.cls.lower())  and \
-               (loc.name == self.name)
+        return (loc.cls.lower() == self.cls.lower()) and (loc.name == self.name)
 
     def __ne__ (self, loc):
         return not self.__eq__ (loc)
 
     def __hash__ (self):
-        return (hash(self.cls) ^ hash(self.name))
+        return hash(self.cls) ^ hash(self.name)
 
     def __repr__(self):
-
-        _str = "/%s/%s" % (self._class, self._name)
+        _str = "/%s/%s" % (self.cls, self.name)
 
         if self.host and self.port:
             _str = '%s:%d%s' % (self.host, self.port, _str)
@@ -157,4 +92,3 @@ class Location(object):
             _str = '%s%s' % (self.host, _str)
 
         return _str
-

@@ -191,9 +191,9 @@ class SiteController (object):
 
         # add site object
         if not self.options.dry:
-            
             for site in self.config.sites:
-                self.manager.addClass(Site, site.name, site.config, True)
+                # TODO: handle site config
+                self.manager.addClass(Site, site.name)
             
         # search paths
         log.info("Setting objects include path from command line parameters...")
@@ -210,7 +210,7 @@ class SiteController (object):
             if self.options.dry:
                 print inst
             else:
-                self._add(inst, path=self.paths["instruments"], start=True)
+                self._add(inst, path=self.paths["instruments"])
 
         log.info("Trying to start controllers...")                
         for ctrl in self.config.controllers + self.options.controllers:
@@ -218,7 +218,7 @@ class SiteController (object):
             if self.options.dry:
                 print ctrl
             else:
-                self._add(ctrl, path=self.paths["controllers"], start=True)
+                self._add(ctrl, path=self.paths["controllers"])
 
         log.info("System up and running.")
 
@@ -226,9 +226,9 @@ class SiteController (object):
         if self.wait and not self.options.dry:
             self.manager.wait()
 
-    def _add (self, location, path, start):
+    def _add (self, location, path):
         try:
-            self.manager.addLocation(location, path, start)
+            self.manager.addLocation(location, path)
         except Exception, e:
             printException(e)
             

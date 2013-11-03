@@ -53,7 +53,7 @@ class ChimeraFormatter (logging.Formatter):
             stream.close()
 
         
-fmt = ChimeraFormatter(fmt='%(asctime)s.%(msecs)d %(levelname)s %(name)s %(filename)s:%(lineno)d %(message)s',
+fmt = ChimeraFormatter(fmt='%(asctime)s.%(msecs)d %(levelname)s %(filename)s:%(lineno)d %(message)s',
                        datefmt='%d-%m-%Y %H:%M:%S')
 
 try:

@@ -1,18 +1,14 @@
+import os.path
+
+from nose.tools import assert_raises
 
 from chimera.core.manager        import Manager
 from chimera.core.chimeraobject  import ChimeraObject
 from chimera.core.proxy          import Proxy
-
-from nose.tools import assert_raises
-
-from chimera.core.exceptions   import InvalidLocationException, \
-                                      ObjectNotFoundException,  \
-                                      NotValidChimeraObjectException, \
-                                      ChimeraObjectException, \
-                                      ClassLoaderException
-
-import os.path
-
+from chimera.core.exceptions     import InvalidLocationException
+from chimera.core.exceptions     import NotValidChimeraObjectException
+from chimera.core.exceptions     import ChimeraObjectException
+from chimera.core.exceptions     import ClassLoaderException
 
 class Simple (ChimeraObject):
 
@@ -37,7 +33,7 @@ class TestManager (object):
     def test_add_start (self):
 
         # add by class
-        assert self.manager.addClass(Simple, "simple", start=True)
+        assert isinstance(self.manager.addClass(Simple, "simple"), Proxy)
 
         # already started
         assert_raises(InvalidLocationException, self.manager.addClass, Simple, "simple")
@@ -46,12 +42,12 @@ class TestManager (object):
         assert_raises(InvalidLocationException, self.manager.addClass, Simple, "")
 
         # by location
-        assert self.manager.addLocation('/ManagerHelper/h', path=[os.path.dirname(__file__)])
+        assert isinstance(self.manager.addLocation('/ManagerHelper/h', path=[os.path.dirname(__file__)]), Proxy)
         assert_raises(ClassLoaderException, self.manager.addLocation, '/What/h')
         assert_raises(InvalidLocationException, self.manager.addLocation, 'foo')
 
-        # start with error
-        #assert self.manager.addLocation('/ManagerHelperWithError/h', start=False)
+        ## start with error
+        #assert self.manager.addLocation('/ManagerHelperWithError/h')
         #assert_raises(ChimeraObjectException, self.manager.start, '/ManagerHelperWithError/h')
 
         # start who?
@@ -74,7 +70,7 @@ class TestManager (object):
 
     def test_remove_stop (self):
 
-        assert self.manager.addClass(Simple, "simple")
+        assert isinstance(self.manager.addClass(Simple, "simple"), Proxy)
 
         # who?
         assert_raises(InvalidLocationException, self.manager.remove, 'Simple/what')
@@ -87,7 +83,9 @@ class TestManager (object):
         assert self.manager.remove('/Simple/simple') == True
 
         # __stop__ error
-        assert self.manager.addLocation("/ManagerHelperWithStopException/h", path=[os.path.dirname(__file__)])
+        assert isinstance(self.manager.addLocation("/ManagerHelperWithStopException/h",
+                                                   path=[os.path.dirname(__file__)]), Proxy)
+
         assert_raises(ChimeraObjectException, self.manager.stop, '/ManagerHelperWithStopException/h')
 
         # another path to stop
@@ -96,34 +94,3 @@ class TestManager (object):
         # by index
         assert self.manager.addClass(Simple, "simple")
         assert self.manager.remove('/Simple/0') == True
-
-    def test_proxy (self):
-
-        assert self.manager.addClass(Simple, "simple")
-
-        # who?
-        assert_raises(InvalidLocationException, self.manager.getProxy, 'wrong')
-        assert_raises(InvalidLocationException, self.manager.getProxy, 'Simple/simple')
-
-        # ok
-        assert self.manager.getProxy ('/Simple/simple')
-        assert self.manager.getProxy ('/Simple/0')
-
-        # calling
-        p = self.manager.getProxy ('/Simple/0')
-        assert isinstance(p, Proxy)
-
-        assert p.answer() == 42
-
-        # oops
-        assert_raises (AttributeError, p.wrong)
-
-    def test_manager (self):
-
-        assert self.manager.addClass(Simple, "simple")
-        
-        p = self.manager.getProxy(Simple)
-        assert p
-
-        m = p.getManager()
-        assert m.GUID() == self.manager.GUID()

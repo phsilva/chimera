@@ -255,5 +255,5 @@ class SystemConfig (object):
         host = dic.pop('host', self.chimera["host"])
         port = dic.pop('port', self.chimera["port"])
 
-        return Location(name=name, cls=cls, host=host, port=port, config=dic)
+        return Location(name=name, cls=cls, host=host, port=port)
 

@@ -71,14 +71,14 @@ class ClassLoader (object):
 
             # ImportError above
             if tb_size == 1:
-                raise ClassLoaderException ("Couldn't find module %s (%s)." % (clsname, path))
+                raise ClassLoaderException ("Couldn't find module %s (%s)." % (clsname.lower(), path))
 
             # ImportError on loaded module
             else:
-                raise ClassLoaderException ("Module %s found but couldn't be loaded." % clsname)
+                raise ClassLoaderException ("Module %s found but couldn't be loaded." % clsname.lower())
 
         except:
-            raise ClassLoaderException ("Module %s found but couldn't be loaded." % clsname)
+            raise ClassLoaderException ("Module %s found but couldn't be loaded." % clsname.lower)()
 
         # turns sys.path back
         [sys.path.remove (p) for p in path]

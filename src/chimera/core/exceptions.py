@@ -1,13 +1,6 @@
 
-import Pyro.constants
-
 import sys
 import traceback
-
-import logging
-
-from chimera.core.compat import *
-
 
 def printException (e, stream=sys.stdout):
 
@@ -21,7 +14,7 @@ def printException (e, stream=sys.stdout):
 def strException (e):
 
     def formatRemoteTraceback(remote_tb_lines) :
-        result=[]
+        result = []
         result.append(" +--- Remote traceback:")
         for line in remote_tb_lines :
             if line.endswith("\n"):
@@ -38,7 +31,8 @@ def strException (e):
     # almost copied form Pyro to allow personalization on format
     try:
         exc_type, exc_value, exc_tb = sys.exc_info()
-        remote_tb = getattr(e, Pyro.constants.TRACEBACK_ATTRIBUTE, None)
+        # remote_tb = getattr(e, Pyro.constants.TRACEBACK_ATTRIBUTE, None)
+        remote_tb = False
         local_tb = traceback.format_exception(exc_type, exc_value, exc_tb)
         
         if remote_tb:
@@ -56,8 +50,8 @@ def strException (e):
 
 class ChimeraException (Exception):
 
-    def __init__ (self, msg="", *args):
-        Exception.__init__ (self, msg, *args)
+    def __init__ (self, message="", *args):
+        Exception.__init__ (self, message, *args)
 
         if not all(sys.exc_info()):
             self.cause = None

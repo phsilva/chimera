@@ -33,56 +33,39 @@ import time
 import sys
 import logging
 
-
-
 class TestSite (object):
 
     def setup (self):
-
-        self.manager = Manager(port=8000)
-
-        #self.manager.addClass(Site, "lna", {"name": "LNA",
-        #                                    "latitude": "-22 32 03",
-        #                                    "longitude": "-45 34 57",
-        #                                    "altitude": "1896"}
-
-        self.manager.addClass(Site, "lna", {"name": "UFSC",
-                                            "latitude": "-27 36 13 ",
-                                            "longitude": "-48 31 20",
-                                            "altitude": "20"})
+        self.site = Site()
+        self.site += {
+            "name": "UFSC",
+            "latitude": "-27 36 13 ",
+            "longitude": "-48 31 20",
+            "altitude": "20"
+        }
 
     def teardown (self):
-        self.manager.shutdown()
+        self.site = None
 
     def test_times (self):
-
-        site = self.manager.getProxy(Site)
-
         try:
             print
-            print "local:", site.localtime()
-            print "UT   :", site.ut()
-            print "JD   :", site.JD()
-            print "MJD  :", site.MJD()
-            print "LST  :", site.LST()
-            print "GST  :", site.GST()
+            print "local:", self.site.localtime()
+            print "UT   :", self.site.ut()
+            print "JD   :", self.site.JD()
+            print "MJD  :", self.site.MJD()
+            print "LST  :", self.site.LST()
+            print "GST  :", self.site.GST()
         except Exception, e:
             printException(e)
 
-
-    def test_sidereal_clock (self):
-
-        return True
-        
-        site = self.manager.getProxy(Site)
-
+    def test_sidereal_clock (self):        
         times = []
         real_times = []
-
-        for i in range (100):
+        for i in range (20):
             t0 = time.clock()
             t0_r = time.time()
-            print "\r%s" % site.LST(),
+            print "\r%s" % self.site.LST(),
             times.append(time.clock()-t0)
             real_times.append(time.time()-t0_r)
 
@@ -91,29 +74,26 @@ class TestSite (object):
         print sum(real_times) / len(real_times)
 
     def test_astros (self):
-
-        site = self.manager.getProxy(Site)
-
         try:
             print
-            print "local   :", site.localtime()
+            print "local   :", self.site.localtime()
             print
-            print "moonrise  :", site.moonrise()
-            print "moonset   :", site.moonset()
-            print "moon pos  :", site.moonpos()
-            print "moon phase:", site.moonphase()
+            print "moonrise  :", self.site.moonrise()
+            print "moonset   :", self.site.moonset()
+            print "moon pos  :", self.site.moonpos()
+            print "moon phase:", self.site.moonphase()
             print
-            print "sunrise:", site.sunrise()
-            print "sunset :", site.sunset()
-            print "sun pos:", site.sunpos()
+            print "sunrise:", self.site.sunrise()
+            print "sunset :", self.site.sunset()
+            print "sun pos:", self.site.sunpos()
             print
 
-            sunset_twilight_begin = site.sunset_twilight_begin()
-            sunset_twilight_end   = site.sunset_twilight_end()
+            sunset_twilight_begin = self.site.sunset_twilight_begin()
+            sunset_twilight_end   = self.site.sunset_twilight_end()
             sunset_twilight_duration = relativedelta(sunset_twilight_end, sunset_twilight_begin)
             
-            sunrise_twilight_begin = site.sunrise_twilight_begin()
-            sunrise_twilight_end = site.sunrise_twilight_end()
+            sunrise_twilight_begin = self.site.sunrise_twilight_begin()
+            sunrise_twilight_end = self.site.sunrise_twilight_end()
             sunrise_twilight_duration = relativedelta(sunrise_twilight_end, sunrise_twilight_begin)            
             
             print "next sunset twilight begins at:", sunset_twilight_begin

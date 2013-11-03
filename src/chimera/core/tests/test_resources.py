@@ -1,70 +1,68 @@
-
-from chimera.core.resources import ResourcesManager
-from chimera.core.exceptions import InvalidLocationException, ObjectNotFoundException
+import os
 
 from nose.tools import assert_raises
 
-from types import StringType
+from chimera.core.resources import Resource, ResourceManager
+from chimera.core.exceptions import InvalidLocationException, ObjectNotFoundException
 
 
-class TestResources:
+class TestResources(object):
 
-    def __init__ (self):
-        # each test will receive a fresh new class, so define our fixture right here
-        self.res = ResourcesManager ()
+    def __init__(self):
+        self.res = None
+
+    def setup (self):
+        self.res = ResourceManager("localhost", 6379)
+        self.res.removeAll()
 
     def test_add (self):
 
         assert len (self.res) == 0
 
-        assert self.res.add ("/Location/l1", "instance-1", "uri-1") == 0
+        r1 = self.res.add("/Location/l1")
+        assert isinstance(r1, Resource)
+        assert len(self.res) == 1
 
         # location already added
-        assert_raises(InvalidLocationException, self.res.add, "/Location/l1", "instance-1", "uri-1")
+        r_already = self.res.add("/Location/l1")
+        assert r_already == r1
         
-        assert self.res.add ("/Location/l2", "instance-2", "uri-2") == 1
+        r2 = self.res.add ("/Location/l2")
+        assert isinstance(r2, Resource)
+        assert len(self.res) == 2
         
-        assert_raises(InvalidLocationException, self.res.add, "wrong location", "instance-2", "uri-2")
+        assert_raises(InvalidLocationException, self.res.add, "wrong location")
 
         assert "/Location/l1" in self.res
         assert "/Location/l2" in self.res
         assert "/Location/0" in self.res
         assert not "/LocationNotExistent/l2" in self.res
 
-        assert len (self.res) == 2
+    def test_uuid(self):
+        assert len(self.res) == 0
+        assert type(self.res.add ("/Location/l1")) == Resource
+        assert type(self.res.add ("/Location/l2")) == Resource
+        assert len(self.res) == 2
 
-    def test_str (self):
+        res1 = self.res.get("/Location/l1")
+        res2 = self.res.get("/Location/l2")
 
-        assert len (self.res) == 0
-        assert self.res.add ("/Location/l1", "instance-1", "uri-1") == 0
-        assert type(str(self.res.get('/Location/0'))) == StringType
-        
+        assert res1.uuid != res2.uuid
+        assert isinstance(res1.uuid, basestring)
 
     def test_remove (self):
-
-        assert len (self.res) == 0
-
-        assert self.res.add ("/Location/l1", "instance-1", "uri-1") == 0
+        self.res.add ("/Location/l1")
         assert self.res.remove ("/Location/l1") == True
-
-        assert_raises(ObjectNotFoundException, self.res.remove, "/What/l1")
-        assert_raises(InvalidLocationException, self.res.remove, "wrong location")
 
         assert "/Location/l1" not in self.res
 
     def test_get (self):
-
-        assert len (self.res) == 0
-
-
-        assert self.res.add ("/Location/l2", "instance-2", "uri-2") == 0
-        assert self.res.add ("/Location/l1", "instance-1", "uri-1") == 1
+        self.res.add ("/Location/l2")
+        self.res.add ("/Location/l1")
 
         ret = self.res.get ("/Location/l1")
 
         assert ret.location == "/Location/l1"
-        assert ret.instance == "instance-1"
-        assert ret.uri == "uri-1"
 
         assert_raises(ObjectNotFoundException, self.res.get, "/Location/l99")
 
@@ -78,16 +76,13 @@ class TestResources:
         assert self.res.get("/Location/0").location == "/Location/l2"
         assert self.res.get("/Location/1").location == "/Location/l1"
         assert_raises(ObjectNotFoundException, self.res.get, '/Location/9')
-        assert_raises(ObjectNotFoundException, self.res.get, '/LocationNotExistent/0')        
+        assert_raises(ObjectNotFoundException, self.res.get, '/LocationNotExistent/0')
         assert_raises(InvalidLocationException, self.res.get, 'wrong location')
 
 
     def test_get_by_class (self):
-        
-        assert len (self.res) == 0
-        
-        assert self.res.add ("/Location/l1", "instance-1", "uri-1") == 0
-        assert self.res.add ("/Location/l2", "instance-2", "uri-2") == 1
+        self.res.add ("/Location/l1")
+        self.res.add ("/Location/l2")
 
         entries = [self.res.get ("/Location/l1"), self.res.get ("/Location/l2")]
 
@@ -98,23 +93,19 @@ class TestResources:
 
 
     def test_get_by_class_and_bases (self):
-
-        assert len (self.res) == 0
+        tests_dir = os.path.abspath(os.path.dirname(__file__))
         
-        class Base(object): pass
-        class A(Base): pass
-        class B(A): pass
+        self.res.add ("/ResourcesHelperA/a", loader_path=[tests_dir])
+        self.res.add ("/ResourcesHelperB/b", loader_path=[tests_dir])
 
-        assert self.res.add ("/A/a", A(), "a-uri") == 0
-        assert self.res.add ("/B/b", B(), "b-uri") == 0
+        self.res.add ("/ResourcesHelperA/aa", loader_path=[tests_dir])
+        self.res.add ("/ResourcesHelperB/bb", loader_path=[tests_dir])
 
-        assert self.res.add ("/A/aa", A(), "a-uri") == 1
-        assert self.res.add ("/B/bb", B(), "b-uri") == 1
-
-        entries = [self.res.get ("/A/a"), self.res.get ("/B/b"), self.res.get ("/A/aa"), self.res.get ("/B/bb")]
+        entries = [
+            self.res.get ("/ResourcesHelperA/a"), self.res.get ("/ResourcesHelperB/b"),
+            self.res.get ("/ResourcesHelperA/aa"), self.res.get ("/ResourcesHelperB/bb")]
 
         # get by class
-        found = self.res.getByClass ("Base", checkBases=True)
-        
-        assert (entries == found)
+        found = self.res.getByClass ("ResourcesHelperBase")
 
+        assert (entries == found == self.res.getAll())

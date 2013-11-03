@@ -1,0 +1,2 @@
+
+class ResourcesHelperBase(object): pass

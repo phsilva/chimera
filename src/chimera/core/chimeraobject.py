@@ -41,7 +41,7 @@ import logging
 import time
 import threading
 
-
+from chimera.core.exceptions import ChimeraException
 __all__ = ['ChimeraObject']
 
     
@@ -139,6 +139,7 @@ class ChimeraObject (RemoteObject, ILifeCycle):
     
     # ILifeCycle implementation
     def __start__ (self):
+        raise ChimeraException("pqp")
         return True
         
     def __stop__ (self):
@@ -202,12 +203,11 @@ class ChimeraObject (RemoteObject, ILifeCycle):
         location = Location(location)
 
         self.__location__ = location
-        self.setGUID("/%s/%s" % (location.cls, location.name))
+        # self.setGUID("/%s/%s" % (location.cls, location.name))
         return True
 
     def getManager (self):
-        if self.getDaemon():
-            return self.getDaemon().getProxyForObj(self.getDaemon().getManager())
+        return None
 
     def getProxy (self):
         # just to put everthing together (no need to change the base implementation)

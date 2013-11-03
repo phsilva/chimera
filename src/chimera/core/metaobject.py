@@ -22,7 +22,7 @@ import threading
 
 from chimera.core.methodwrapper import MethodWrapper, MethodWrapperDispatcher
 from chimera.core.eventwrapper  import EventWrapperDispatcher
-from chimera.core.lockwrapper   import LockWrapper, LockWrapperDispatcher
+from chimera.core.lockwrapper   import LockWrapperDispatcher
 
 from chimera.core.rwlock        import ReadWriteLock
 
@@ -69,7 +69,7 @@ class MetaObject (type):
 
                 # auto-locked methods
                 elif hasattr(obj, LOCK_ATTRIBUTE_NAME):
-                    _dict[name] = LockWrapper(obj, dispatcher=LockWrapperDispatcher)
+                    _dict[name] = MethodWrapper(obj, dispatcher=LockWrapperDispatcher)
                     methods.append(name)
 
                 # normal objects

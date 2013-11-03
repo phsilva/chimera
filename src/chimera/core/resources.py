@@ -19,71 +19,65 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-from chimera.core.location   import Location
-from chimera.core.exceptions import InvalidLocationException, \
-                                    ObjectNotFoundException, \
-                                    ChimeraException
+import logging
 
-import time
+import redis as R
+
+from chimera.core.location    import Location
+from chimera.core.classloader import ClassLoader
+from chimera.core.exceptions  import ObjectNotFoundException, \
+                                     ChimeraException
+
+
+log = logging.getLogger(__name__)
+
 import sys
+import time
+import uuid
+import collections
+import jsonpickle
 
+Resource = collections.namedtuple("Resource", ["uuid", "location", "bases", "created"])
 
-class Resource (object):
+class ResourceManager(object):
 
-    def __init__ (self):
-        self._location = None
-        self._instance = None
-        self._bases    = []
-        self._created  = time.time ()
-        self._loop     = None
-        self._uri      = None        
+    RESOURCES_KEY = "/Chimera/resources"
 
-    location = property (lambda self: self._location, lambda self, value: setattr (self, '_location', value))
-    instance = property (lambda self: self._instance, lambda self, value: setattr (self, '_instance', value))
-    bases    = property (lambda self: self._bases,    lambda self, value: setattr (self, '_bases', value))
-    created  = property (lambda self: self._created,  lambda self, value: setattr (self, '_created', value))
-    loop     = property (lambda self: self._loop,     lambda self, value: setattr (self, '_loop', value))    
-    uri      = property (lambda self: self._uri,      lambda self, value: setattr (self, '_uri', value))
-    
-    def __str__ (self):
-        return "<%s (%s) at %s>" % (self.location, self.instance, self.uri)
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.redis = R.StrictRedis(self.host, self.port)
 
-
-class ResourcesManager (object):
-    
-    def __init__ (self):
-        self._res = {}
-    
-    def add (self, location, instance, uri, loop=None):
-
-        location = self._validLocation (location)
+    def add (self, location, loader_path = []):
+        location = self._validLocation(location)
 
         if location in self:
-            raise InvalidLocationException("Location already on the resource pool.")
+            return self.get(location)
 
-        entry = Resource ()
-        entry.location = location
-        entry.instance = instance
-        if entry.instance is not None:
-            entry.bases = [ b.__name__ for b in type(entry.instance).mro() ]
-        entry.loop     = loop
-        entry.uri = uri
+        bases = []
 
-        self._res[location] = entry
+        classLoader = ClassLoader()
 
-        # get the number of instances of this specific class, counting this one
-        # and not including parents (minus 1 to start couting at 0)
-        return len(self.getByClass(location.cls, checkBases=False)) - 1
+        try:
+            cls = classLoader.loadClass(location.cls, path=loader_path)
+            bases += map(lambda base: base.__name__, cls.mro())
+        except Exception:
+            pass
+
+        resource = Resource(uuid=str(uuid.uuid4()), location=location, bases=bases, created=time.time())
+
+        self.redis.hset(ResourceManager.RESOURCES_KEY, str(location), jsonpickle.encode(resource))
+
+        return resource
 
     def remove (self, location):
-        entry = self.get(location)
-        del self._res[entry.location]
-        return True
+        return self.redis.hdel(ResourceManager.RESOURCES_KEY, str(location))
 
-    def get (self, item):
+    def removeAll(self):
+        return self.redis.delete(ResourceManager.RESOURCES_KEY)
 
-        location = self._validLocation(item)
-
+    def get (self, location):
+        location = self._validLocation(location)
         try:
             index = int(location.name)
             return self._getByIndex(location, index)
@@ -91,54 +85,46 @@ class ResourcesManager (object):
             # not a numbered instance
             pass
 
-        return self._get (location)
+        return self._get(location)
 
-    def getByClass(self, cls, checkBases=True):
-        
-        toRet = []
+    def getAll(self):
+        resources = map(lambda x: jsonpickle.decode(x), self.redis.hvals(ResourceManager.RESOURCES_KEY))
+        resources.sort(key=lambda r: r.created)
+        return resources
 
-        for k, v in self.items():
+    def getByClass(self, cls):
+        resources = filter(lambda resource: cls in resource.bases, self.getAll())
+        resources.sort(key=lambda r: r.created)
+        return resources
 
-            if not checkBases:
-                if k.cls == cls:
-                    toRet.append(self._res[k])
-            else:
-                # return if class or any base matches
-                if cls == k.cls or cls in v.bases:
-                    toRet.append(self._res[k])
+    def _get(self, location):
+        location = self._validLocation(location)
 
-        toRet.sort (key=lambda entry: entry.created)
-        return toRet
-
-    def _get (self, item):
-
-        location = self._validLocation (item)
-        locations = [x.location for x in self.getByClass(location.cls)]
+        resources = self.getByClass(location.cls)
+        locations = [x.location for x in resources]
         
         if location in locations:
-            ret = filter(lambda x: x == location, self.keys())
-            return self._res[ret[0]]
+            ret = filter(lambda r: r.location == location, resources)
+            return ret[0]
         else:
             raise ObjectNotFoundException("Couldn't find %s." % location)
 
 
-    def _getByIndex(self, item, index):
-
-        location = self._validLocation (item)
+    def _getByIndex(self, location, index):
+        location = self._validLocation (location)
 
         insts = self.getByClass(location.cls)
 
         if insts:
             try:
-                return self._res[insts[index].location]
+                return jsonpickle.decode(self.redis.hget(ResourceManager.RESOURCES_KEY, insts[index].location))
             except IndexError:
                 raise ObjectNotFoundException("Couldn't find %s instance #%d." % (location, index))
         else:
             raise ObjectNotFoundException("Couldn't find %s." % location)
 
 
-    def _validLocation (self, item):
-       
+    def _validLocation(self, item):
         ret = item
 
         if not isinstance (item, Location):
@@ -146,41 +132,20 @@ class ResourcesManager (object):
 
         return ret
 
-    def __getitem__(self, item):
-
+    def __getitem__(self, location):
         try:
-            return self.get(item)
+            return self.get(location)
         except ChimeraException:
-            raise KeyError("Couldn't find %s" % item), None, sys.exc_info()[2]
+            raise KeyError("Couldn't find %s" % location), None, sys.exc_info()[2]
 
-    def __contains__ (self, item):
-
+    def __contains__ (self, location):
         # note that our 'in'/'not in' tests are for keys (locations) and
         # not for values
-
-        item = self._validLocation (item)
-
-        if item in self.keys():
+        try:
+            _ = self.get(location)
             return True
-        else:
-            # is this a numbered instance?
-            try:
-                index = int(item.name)
-                return bool(self._getByIndex(item, index))
-            except ValueError:
-                # not a numbered instance
-                return False
-            except ObjectNotFoundException:
-                # nor a valid object
-                return False
+        except ObjectNotFoundException:
+            return False
 
-
-    __iter__     = lambda self: self._res.__iter__ ()
-    __len__      = lambda self: self._res.__len__ ()
-
-    keys      = lambda self: self._res.keys ()
-    values    = lambda self: self._res.values ()
-    items     = lambda self: self._res.items ()
-    iterkeys  = lambda self: self._res.iterkeys ()
-    iteritems = lambda self: self._res.iteritems ()
-
+    def __len__(self):
+        return self.redis.hlen(ResourceManager.RESOURCES_KEY)

@@ -1,3 +1,27 @@
 
-See issues list on http://code.google.com/p/chimera/issues.
+2013/09/XX
+
+- converter documentação do epydoc para o Sphinx
+- eliminar Pyro: message queue/pub sub/rpc (a)sincrono utilizando redis
+- eliminar uso do yaml, SystemConfig deve usar algo pronto e nativo do Python ()
+- estudar TPL2/TSI
+- ctypes na sbig
+- apogee (headers, roda de filtros)
+
+2013/10/03
+
+- systemconfig -> config (core), json puro, somente recursos, sem casos especiais.
+- site/main.py vai para core, bem mais simples e sem casos especiais, apenas "chimera", "site", e itera nos "resources"
+- no core, possível descobrir todos os recursos disponíveis (últil para gui), com suas respectivas configs, estilo systemd para listar o que está disponível e o que está instanciado (com status), "chimeractl status"
+
+- chimera -> chimerad
+- chimera-admin -> chimeractl
+
+2013/11/03
+
+- exceptions
+- expire nos keys
+- como lidar com multiplos managers?
+- uuid or location?
+- jsonpickle em tudo?
 

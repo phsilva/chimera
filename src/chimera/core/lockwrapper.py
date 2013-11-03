@@ -22,23 +22,14 @@
 import logging
 import time
 
-from chimera.core.methodwrapper  import MethodWrapper, MethodWrapperDispatcher
+from chimera.core.methodwrapper  import MethodWrapperDispatcher
 
 from chimera.core.constants      import INSTANCE_MONITOR_ATTRIBUTE_NAME
 
 import chimera.core.log
 log = logging.getLogger(__name__)
 
-
-__all__ = ['LockWrapper',
-           'LockWrapperDispatcher']
-
-
-class LockWrapper (MethodWrapper):
-
-    def __init__ (self, func, specials = None, dispatcher = None):
-        MethodWrapper.__init__(self, func, specials, dispatcher)
-
+__all__ = ['LockWrapperDispatcher']
 
 class LockWrapperDispatcher (MethodWrapperDispatcher):   
 

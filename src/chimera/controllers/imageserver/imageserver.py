@@ -5,8 +5,6 @@ from chimera.controllers.imageserver.imageserverhttp import ImageServerHTTP
 
 from chimera.util.image import Image
 
-import Pyro.util
-
 import os
 
 
@@ -33,9 +31,7 @@ class ImageServer(ChimeraObject):
         self.imagesByPath = {}
 
     def __start__ (self):
-
-        if self["http_host"] == "default":
-            self["http_host"] = self.getManager().getHostname()
+        self["http_host"] = "localhost"
         
         if self["httpd"]:    
             self.http = ImageServerHTTP(self)
@@ -71,30 +67,24 @@ class ImageServer(ChimeraObject):
                 self.register(Image.fromFile(file))
 
     def register(self, image):
-        try:
-            if "CHM_ID" in image:
-                image.setGUID(image["CHM_ID"])
-            else:
-                image += ("CHM_ID", image.GUID())
-                image.save()
-                
-            self.getDaemon().connect(image)
-            self.imagesByID[image.GUID()]    = image
-            self.imagesByPath[image.filename()] = image
+        if "CHM_ID" in image:
+            image.setGUID(image["CHM_ID"])
+        else:
+            image += ("CHM_ID", image.GUID())
+            image.save()
+            
+        self.getDaemon().connect(image)
+        self.imagesByID[image.GUID()]    = image
+        self.imagesByPath[image.filename()] = image
 
-            # save Image's HTTP address
-            image.http(self.getHTTPByID(image.GUID()))
-            return image.getProxy()
-        except Exception, e:
-            print ''.join(Pyro.util.getPyroTraceback(e))
+        # save Image's HTTP address
+        image.http(self.getHTTPByID(image.GUID()))
+        return image.getProxy()
 
     def unregister(self, image):
-        try:
-            self.getDaemon().disconnect(image)
-            del self.imagesByID[image.GUID()]
-            del self.imagesByPath[image.filename()]
-        except Exception, e:
-            print ''.join(Pyro.util.getPyroTraceback(e))
+        self.getDaemon().disconnect(image)
+        del self.imagesByID[image.GUID()]
+        del self.imagesByPath[image.filename()]
     
     def getImageByID (self, id):
         if id in self.imagesByID:

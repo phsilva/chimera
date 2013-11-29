@@ -139,6 +139,14 @@ class EnumValue(object):
 
         return result
 
+    # TODO: what about __enumtype?
+    def __getstate__(self):
+        return {"key": self.__key, "index": self.__index}
+
+    def __setstate__(self, state):
+        self.__index = state["index"]
+        self.__key = state["key"]
+
 
 class Enum(object):
     """ Enumerated type """

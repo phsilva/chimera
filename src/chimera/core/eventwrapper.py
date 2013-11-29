@@ -35,7 +35,6 @@ class EventWrapperDispatcher (MethodWrapperDispatcher):
         MethodWrapperDispatcher.__init__ (self, wrapper, instance, cls)
 
     def call (self, *args, **kwargs):
-
         if hasattr(self.instance, EVENTS_PROXY_NAME):
             getattr(self.instance, EVENTS_PROXY_NAME).publish (self.func.__name__, *args[1:], **kwargs)
 
@@ -57,7 +56,7 @@ class EventWrapperDispatcher (MethodWrapperDispatcher):
         if not isinstance (other, ProxyMethod):
             return copy.copy(self)
 
-        handler["handler"]["proxy"] = other.proxy.URI
+        handler["handler"]["proxy"] = other.location
         handler["handler"]["method"] = str(other.__name__)
    
         if hasattr(self.instance, EVENTS_PROXY_NAME):

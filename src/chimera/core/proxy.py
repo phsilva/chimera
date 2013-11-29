@@ -25,13 +25,16 @@ from chimera.core.rpc import RedisRpc
 from chimera.core.jsonrpc import Request, Response
 from chimera.core.resources import ResourceManager
 from chimera.core.location import Location
-from chimera.core.exceptions import ChimeraException
+from chimera.core.constants import EVENTS_PROXY_NAME
 
 __all__ = ['Proxy',
            'ProxyMethod']
 
 log = logging.getLogger(__name__)
-           
+
+def call_random_id(location):
+    return str(location) + "#" + str(uuid.uuid4())
+
 class Proxy:
 
     def __init__ (self, location):
@@ -39,7 +42,7 @@ class Proxy:
             location = Location(location)
 
         self.location = location
-        self.location_uuid = None
+        self.resolved = False
 
         self.rpc = RedisRpc(location.host or "localhost",
                             location.port or 6379)
@@ -79,64 +82,68 @@ class ProxyMethod (object):
         return self.__sync_dispatcher__(*args, **kwargs)
 
     def __sync_dispatcher__(self, *args, **kwargs):
-        if self.proxy.location_uuid is None:
+        if not self.proxy.resolved:
             resources = ResourceManager(self.proxy.location.host or "localhost",
                                         self.proxy.location.port or 6379)
-            self.proxy.location_uuid = resources.get(self.proxy.location).uuid
+
+            self.proxy.location = resources.get(self.proxy.location).location
+            self.proxy.resolved = True
 
         request = Request()
-        request.id = self.proxy.location_uuid + "_" + str(uuid.uuid4())
+        request.id = call_random_id(self.proxy.location)
         request.method = self.method
         request.params = [args, kwargs]
 
-        self.proxy.rpc.send(self.proxy.location_uuid, str(request))
+        self.proxy.rpc.send(self.proxy.location, request)
 
         _, buff = self.proxy.rpc.recv(request.id)
 
-        response = Response.fromBuffer(buff)
-        if response.error is None:
-            return response.result
-        else:
-            raise ChimeraException("pqp")
+        # discard request queue as it will not be reused, could use expire, but what is the right (tm) timeout?
+        self.proxy.rpc.redis.delete(request.id)
 
-    # async pattern
-    #def begin (self, *args, **kwargs):
-    #    return self.dispatcher("%s.begin" % self.method, args, kwargs)
-    #
-    #def end (self, *args, **kwargs):
-    #    return self.dispatcher("%s.end" % self.method, args, kwargs)
+        response = Response.fromBuffer(buff)
+        return response.result
 
     # event handling
-    #def __do (self, other, action):
-    #
-    #    handler = {"topic"    : self.method,
-    #               "handler"  : {"proxy" : "", "method": ""}}
-    #
-    #    # REMEBER: Return a copy of this wrapper as we are using +=
-    #
-    #    # Can't add itself as a subscriber
-    #    if other == self:
-    #        return self
-    #
-    #    # passing a proxy method?
-    #    if not isinstance (other, ProxyMethod):
-    #        log.debug("Invalid parameter: %s" % other)
-    #        raise TypeError("Invalid parameter: %s" % other)
-    #
-    #    handler["handler"]["proxy"] = other.proxy.location
-    #    handler["handler"]["method"] = str(other.__name__)
-    #
-    #    try:
-    #        self.dispatcher("%s.%s" % (EVENTS_PROXY_NAME, action), (handler,), {})
-    #    except Exception, e:
-    #        log.exception("Cannot %s to topic '%s' using proxy '%s'." % (action,
-    #                                                                     self.method,
-    #                                                                     self.proxy))
-    #
-    #    return self
-    #
-    #def __iadd__ (self, other):
-    #    return self.__do (other, "subscribe")
-    #
-    #def __isub__ (self, other):
-    #    return self.__do (other, "unsubscribe")
+    def __iadd__(self, proxy_method):
+        """
+        @type proxy_method: ProxyMethod
+        """
+        return self.__event_dispatcher__(proxy_method, "subscribe")
+
+    def __isub__(self, proxy_method):
+        """
+        @type proxy_method: ProxyMethod
+        """
+        return self.__event_dispatcher__(proxy_method, "unsubscribe")
+
+    def __event_dispatcher__(self, callback, action):
+        """
+        @type callback: ProxyMethod
+        @type action: str
+        """
+        # Can't add itself as a subscriber
+        if callback == self:
+            return self
+
+        # passing a proxy method?
+        if not isinstance (callback, ProxyMethod):
+            log.debug("Invalid parameter: %s" % callback)
+            raise TypeError("Invalid parameter: %s" % callback)
+
+        kwargs = {"topic": self.method, "handler": {"id": str(callback.proxy.location), "method": callback.method}}
+
+        request = Request()
+        request.id = call_random_id(self.proxy.location)
+        request.method = "%s.%s" % (EVENTS_PROXY_NAME, action)
+        request.params = [[], kwargs]
+
+        self.proxy.rpc.send(self.proxy.location, request)
+
+        _, buff = self.proxy.rpc.recv(request.id)
+
+        # discard request queue as it will not be reused, could use expire, but what is the right (tm) timeout?
+        self.proxy.rpc.redis.delete(request.id)
+
+        return self
+

@@ -79,7 +79,7 @@ class SiteController (object):
         def check_includepath (option, opt_str, value, parser):
 
             if not value or not os.path.isdir (os.path.abspath(value)):
-                raise optparse.OptionValueError ("Couldn't found %s include path." % value)
+                raise optparse.OptionValueError ("Couldn't find %s include path." % value)
 
             eval ('parser.values.%s.append ("%s")' % (option.dest, value))
 

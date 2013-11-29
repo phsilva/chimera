@@ -33,8 +33,6 @@ from chimera.core.exceptions   import InvalidLocationException, \
                                       ObjectNotFoundException, \
                                       NotValidChimeraObjectException, \
                                       ChimeraObjectException
-from chimera.core.constants import MANAGER_LOCATION
-
 
 __all__ = ['Manager']
 
@@ -58,10 +56,10 @@ class Manager:
     def __init__(self, host = "localhost", port = 6379):
         log.info("Starting manager.")
 
-        self.resources = ResourceManager(host, port)
-        self.resources.removeAll()
+        self.resourceManager = ResourceManager(host, port)
 
         self.zygotes = {}
+        self.resources = {}
 
         self.host = host
         self.port = port
@@ -94,16 +92,12 @@ class Manager:
 
             # stop objects
             try:
-                elderly_first = sorted(self.resources.getAll(),
+                elderly_first = sorted(self.resources.values(),
                                        cmp=lambda x, y: cmp(x.created, y.created),
                                        reverse=True)
 
                 for resource in elderly_first:
-                    # except Manager
-                    if resource.location == MANAGER_LOCATION: continue
-
-                    # stop object
-                    self.stop(resource.location)
+                    self.remove(resource.location)
             finally:
                 # die!
                 self.died.set()
@@ -132,7 +126,7 @@ class Manager:
             # of the interrupted syscall
             self.shutdown()
 
-    def addLocation (self, location, path = []):
+    def addLocation (self, location, path = None):
         """
         Add the class pointed by 'location' to the system configuring it using 'config'.
 
@@ -179,24 +173,32 @@ class Manager:
 
         # names must not start with a digit
         if location.name[0].isdigit():
-            raise InvalidLocationException ("Invalid instance name: %s (must start with a letter)" % location)
+            raise InvalidLocationException("Invalid instance name: %s (must start with a letter)" % location)
 
         if location in self.resources:
-            raise InvalidLocationException ("Location %s is already in the system. Only one allowed (Tip: change the name!)." % location)
+            raise InvalidLocationException("Location %s is already in the system. Only one allowed (Tip: change the name!)." % location)
 
         # check if it's a valid ChimeraObject
         if not issubclass(cls, ChimeraObject):
-            raise NotValidChimeraObjectException ("Cannot add the class %s. It doesn't descend from ChimeraObject." % cls.__name__)
+            raise NotValidChimeraObjectException("Cannot add the class %s. It doesn't descend from ChimeraObject." % cls.__name__)
         
         # start zygote to create the desired object
-        res = self.resources.add(location)
+        resource = self.resourceManager.add(location)
 
-        zygote = Zygote(res)
-        zygote.start()
+        zygote = Zygote(resource)
 
+        self.resources[location] = resource
         self.zygotes[location] = zygote
 
-        self.start(location)
+        try:
+            zygote.start()
+            self.start(location)
+        except Exception as e:
+            self.resourceManager.remove(location)
+            del self.zygotes[location]
+            del self.resources[location]
+
+            raise e
 
         return Proxy(location)
        
@@ -219,7 +221,11 @@ class Manager:
 
         self.stop(location)
         self.zygotes[location].stop()
-        self.resources.remove(location)
+
+        self.resourceManager.remove(location)
+
+        del self.resources[location]
+        del self.zygotes[location]
 
         return True
 

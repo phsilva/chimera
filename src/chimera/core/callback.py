@@ -19,17 +19,17 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-import hashlib
-import time
-import random
+import uuid
 
 from chimera.core.chimeraobject import ChimeraObject
 
-
 __all__ = ['callback']
 
+class Callback(ChimeraObject):
+    def __init__ (self):
+        ChimeraObject.__init__(self)
 
-def callback (manager):
+def callback(manager):
     """Callback decorator.
     Use this decorator to add an callback object to an active Manager.
     This decorator returns a ProxyMethod that you use to subscribe to an event (using += operator)
@@ -47,14 +47,8 @@ def callback (manager):
     @rtype: ProxyMethod
     """
 
-    class Callback (ChimeraObject):
-        def __init__ (self):
-            ChimeraObject.__init__(self)
-
-    def clbk_deco (f):
+    def clbk_deco(f):
         setattr(Callback, 'handler', staticmethod(f))
-        return manager.addClass(Callback, 
-                                'h'+hashlib.sha1(str(time.time())+str(random.random())).hexdigest(),
-                                start=False).handler
+        return manager.addClass(Callback, "h_" + str(uuid.uuid4())).handler
 
     return clbk_deco

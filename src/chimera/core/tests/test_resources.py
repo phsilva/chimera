@@ -24,9 +24,8 @@ class TestResources(object):
         assert len(self.res) == 1
 
         # location already added
-        r_already = self.res.add("/Location/l1")
-        assert r_already == r1
-        
+        assert_raises(InvalidLocationException, self.res.add, "/Location/l1")
+
         r2 = self.res.add ("/Location/l2")
         assert isinstance(r2, Resource)
         assert len(self.res) == 2
@@ -38,31 +37,37 @@ class TestResources(object):
         assert "/Location/0" in self.res
         assert not "/LocationNotExistent/l2" in self.res
 
-    def test_uuid(self):
-        assert len(self.res) == 0
-        assert type(self.res.add ("/Location/l1")) == Resource
-        assert type(self.res.add ("/Location/l2")) == Resource
-        assert len(self.res) == 2
+        r3 = self.res.add("/Location/h_f5167765-a784-4ecf-80fd-1dfb859339c7")
+        assert isinstance(r3, Resource)
+        assert len(self.res) == 3
 
-        res1 = self.res.get("/Location/l1")
-        res2 = self.res.get("/Location/l2")
-
-        assert res1.uuid != res2.uuid
-        assert isinstance(res1.uuid, basestring)
 
     def test_remove (self):
         self.res.add ("/Location/l1")
-        assert self.res.remove ("/Location/l1") == True
+        assert len(self.res) == 1
 
+        assert self.res.remove ("/Location/l1") == True
         assert "/Location/l1" not in self.res
+        assert len(self.res) == 0
+
+    def test_remove (self):
+        self.res.add ("/Location/l1")
+        self.res.add ("/Location/l2")
+        assert len(self.res) == 2
+
+        assert self.res.remove ("/Location/l1") == True
+        assert self.res.remove ("/Location/l2") == True
+        assert "/Location/l1" not in self.res
+        assert "/Location/l2" not in self.res
+        assert len(self.res) == 0
 
     def test_get (self):
         self.res.add ("/Location/l2")
         self.res.add ("/Location/l1")
+        self.res.add("/Location/h_f5167765-a784-4ecf-80fd-1dfb859339c7")
 
-        ret = self.res.get ("/Location/l1")
-
-        assert ret.location == "/Location/l1"
+        ret = self.res.get("/Location/h_f5167765-a784-4ecf-80fd-1dfb859339c7")
+        assert ret.location == "/Location/h_f5167765-a784-4ecf-80fd-1dfb859339c7"
 
         assert_raises(ObjectNotFoundException, self.res.get, "/Location/l99")
 
@@ -70,7 +75,6 @@ class TestResources(object):
         assert self.res["/Location/l1"].location == "/Location/l1"
         assert_raises(KeyError, self.res.__getitem__, "/LocationNotExistent/l1")
         assert_raises(KeyError, self.res.__getitem__, "wrong location")        
-        
 
         # get by index
         assert self.res.get("/Location/0").location == "/Location/l2"
@@ -78,7 +82,6 @@ class TestResources(object):
         assert_raises(ObjectNotFoundException, self.res.get, '/Location/9')
         assert_raises(ObjectNotFoundException, self.res.get, '/LocationNotExistent/0')
         assert_raises(InvalidLocationException, self.res.get, 'wrong location')
-
 
     def test_get_by_class (self):
         self.res.add ("/Location/l1")

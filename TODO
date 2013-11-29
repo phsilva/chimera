@@ -24,4 +24,61 @@
 - como lidar com multiplos managers?
 - uuid or location?
 - jsonpickle em tudo?
+- testar api JS?
+- eventos
+- como cancelar açõs se o zygoto é single-threaded?
 
+- cenários:
+        OK rpc endpoint: /Instrument/name
+
+        OK request id: /Instrument/name#[id chamada], [id chamada]=uuid4
+
+        OK chamada sincrona, ele mesmo blpop no request id.
+
+            p = Proxy(location) # host/port determina redis.
+            result = p.metodo(*args, **kwargs)          # sincrona
+
+        chamada assincrona, retorna um future que irá popar o request id.
+
+            future = p.metodo.begin(*args, **kwargs)    # assíncrona
+
+            result = future.wait()
+            bool = future.finished() # ver api C#
+
+            caso uso:
+
+            ch = Chimera(host="127.0.0.1", port=6379) # interface com resources
+
+            p = chimera.getProxy("/Telescope/0")
+            result = p.slewToRaDec(Position.fromRaDec(0,0))
+
+            slew = p.slewToRaDec.begin(Position.fromRaDec(0,0))
+
+            while not slew.finished(): # possivelmente blop com timeout 1s para não exagerar no pooling.
+                print "Slewing..."
+                if cancel:
+                    p.abortSlew()
+
+            print slew.result()
+
+        eventos:
+            mecanismo entre ChimeraObject's para aviso de mudança de status
+
+            @callback é um atalho para adicionar um novo ChimeraObject com apenas um método definido.
+
+            p.slewBegin += callback => callback deve pode ser um ProxyMethod de onde será extraído o rpc endpoint do objeto para o qual este Proxy aponta,
+                do callback em si é usada o nome do método para garantir que seja feito um request para este método no momento da invocação do evento.
+                Na invocação, o publisher utilizará um rpushx para cada objeto inscrito no evento (x para garantir que proxies que já morreram não acumulem mensagens).
+
+                O objeto, por sua vez, deve possuir um zygoto papando os requets e disparando (cada um em sua thread) os métodos requisitados.
+
+cenário:
+
+Linux com chimerad e chimera rodando câmera SBIG USB.
+Windows com TheSky + Paramount ME e chimera.
+
+39/11/2013
+
+- adicionar 'lock' file para detectar se chimera terminou corretamente. Caso não tenha feito, desregistrar todos os recursos que ele tenha registrado.
+- ctrl-c segurando por alguma razao
+- como desligar os eventos subscribed ao matar os callbacks?

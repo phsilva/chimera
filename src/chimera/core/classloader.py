@@ -43,8 +43,8 @@ class ClassLoader (object):
         by Jorgen Hermann
         """
 
-        if clsname.lower() in self._cache:
-            return self._cache[clsname.lower()]
+        if clsname in self._cache:
+            return self._cache[clsname]
 
         if not isinstance(path, (list, tuple)):
             path = [path]
@@ -87,7 +87,7 @@ class ClassLoader (object):
         cls = None
         
         for k, v in vars(module).items():
-            if k.lower() == clsname.lower():
+            if k == clsname:
                 cls = v
                 break
         
@@ -95,7 +95,7 @@ class ClassLoader (object):
             raise ClassLoaderException ("Module found but couldn't fount class on module '%s' (%s)." %
                                         (clsname.lower(), module.__file__))
 
-        self._cache[clsname.lower()] = cls
+        self._cache[clsname] = cls
 
-        return self._cache[clsname.lower()]
+        return self._cache[clsname]
 

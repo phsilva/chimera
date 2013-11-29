@@ -19,7 +19,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from chimera.core.metaobject   import MetaObject
-from chimera.core.remoteobject import RemoteObject
 
 from chimera.core.config      import Config
 from chimera.core.eventsproxy import EventsProxy
@@ -45,12 +44,12 @@ from chimera.core.exceptions import ChimeraException
 __all__ = ['ChimeraObject']
 
     
-class ChimeraObject (RemoteObject, ILifeCycle):
+class ChimeraObject(ILifeCycle):
 
     __metaclass__ = MetaObject
 
     def __init__ (self):
-        RemoteObject.__init__(self)
+        ILifeCycle.__init__(self)
     
         # event handling
         self.__events_proxy__ = EventsProxy ()
@@ -199,22 +198,15 @@ class ChimeraObject (RemoteObject, ILifeCycle):
         return self.__location__
 
     def __setlocation__ (self, location):
-
         location = Location(location)
-
         self.__location__ = location
-        # self.setGUID("/%s/%s" % (location.cls, location.name))
         return True
 
-    def getManager (self):
-        return None
-
-    def getProxy (self):
-        # just to put everthing together (no need to change the base implementation)
-        return super(ChimeraObject, self).getProxy()
-    
-    def getGUID(self):
-        return self.objectGUID
-    
     def getMetadata(self, request):
         return []
+
+    def __str__(self):
+        return "<ChimeraObject %s (%x)>" % (str(self.getLocation()), id())
+
+    def __unicode__(self):
+        return unicode(self.__str__())

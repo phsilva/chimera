@@ -11,7 +11,7 @@ class RedisRpc:
         self.redis = R.StrictRedis(self.host, self.port)
 
     def send(self, queue, data):
-        return self.redis.rpush(queue, data)
+        return self.redis.rpush(str(queue), str(data))
 
     def recv(self, queue):
-        return self.redis.blpop(queue)
+        return self.redis.blpop(str(queue))

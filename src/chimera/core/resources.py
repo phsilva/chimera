@@ -25,19 +25,17 @@ import redis as R
 
 from chimera.core.location    import Location
 from chimera.core.classloader import ClassLoader
-from chimera.core.exceptions  import ObjectNotFoundException, \
-                                     ChimeraException
-
+from chimera.core.exceptions  import ObjectNotFoundException
+from chimera.core.exceptions  import InvalidLocationException
 
 log = logging.getLogger(__name__)
 
 import sys
 import time
-import uuid
 import collections
 import jsonpickle
 
-Resource = collections.namedtuple("Resource", ["uuid", "location", "bases", "created"])
+Resource = collections.namedtuple("Resource", ["location", "bases", "created"])
 
 class ResourceManager(object):
 
@@ -52,7 +50,7 @@ class ResourceManager(object):
         location = self._validLocation(location)
 
         if location in self:
-            return self.get(location)
+            raise InvalidLocationException("This resource is already registered ('%s')." % str(location))
 
         bases = []
 
@@ -64,7 +62,7 @@ class ResourceManager(object):
         except Exception:
             pass
 
-        resource = Resource(uuid=str(uuid.uuid4()), location=location, bases=bases, created=time.time())
+        resource = Resource(location=location, bases=bases, created=time.time())
 
         self.redis.hset(ResourceManager.RESOURCES_KEY, str(location), jsonpickle.encode(resource))
 
@@ -135,7 +133,7 @@ class ResourceManager(object):
     def __getitem__(self, location):
         try:
             return self.get(location)
-        except ChimeraException:
+        except BaseException:
             raise KeyError("Couldn't find %s" % location), None, sys.exc_info()[2]
 
     def __contains__ (self, location):

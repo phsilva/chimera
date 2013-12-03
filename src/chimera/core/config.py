@@ -19,7 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-from types import (IntType, FloatType, StringType, LongType,
+from types import (IntType, FloatType, StringTypes, LongType,
                    DictType, TupleType, ListType, BooleanType)
 
 try:
@@ -92,7 +92,7 @@ class IntChecker (Checker):
         if type (value) in (IntType, LongType, FloatType, BooleanType):
             return int (value)
 
-        if type (value) == StringType:
+        if type (value) in StringTypes:
             # try to convert to int (use float first and then cast (loosely)
             try:
                 tmp = float (value)
@@ -118,7 +118,7 @@ class FloatChecker (Checker):
         if type (value) in (FloatType, IntType, LongType, BooleanType):
             return float (value)
 
-        if type (value) == StringType:
+        if type (value) in StringTypes:
 
             # try to convert to int
             try:
@@ -169,7 +169,7 @@ class BoolChecker (Checker):
             if value == 0:
                 return False
 
-        if type (value) == StringType:
+        if type (value) in StringTypes:
 
             value = value.strip().lower()
 
@@ -206,7 +206,7 @@ class OptionsChecker (Checker):
                                  "checker": FloatChecker ()})
                 continue
 
-            if type (value) == StringType:
+            if type (value) in StringTypes:
                 options.append ({"value": value,
                                  "checker": StringChecker ()})
                 continue
@@ -282,7 +282,7 @@ class EnumChecker (Checker):
             if value in self.enumtype:
                 return value
 
-        if type(value) == StringType:
+        if type(value) in StringTypes:
             ret = [v for v in self.enumtype if str(v).upper() == value.upper()]
             if ret:
                 return ret[0]
@@ -372,7 +372,7 @@ class Config (object):
                 options[name] = Option (name, value, FloatChecker ())
                 continue
 
-            if type (value) == StringType:
+            if type (value) in StringTypes:
                 options[name] = Option (name, value, StringChecker ())
                 continue
 
@@ -417,7 +417,7 @@ class Config (object):
 
     def __getitem__ (self, name):
 
-        if type (name) != StringType:
+        if type(name) not in StringTypes:
             raise TypeError
 
         if name in self:

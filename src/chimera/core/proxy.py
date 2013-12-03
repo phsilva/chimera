@@ -57,8 +57,18 @@ class Proxy:
     def __repr__ (self):
         return "<%s proxy at %s>" % (self.location, hex(id(self)))
 
+    def __nonzero__(self):
+        return True
+
+    def __copy__(self):
+        return Proxy(self.location)
+
     def __str__ (self):
         return "[proxy for %s]" % self.location
+
+    def __unicode__(self):
+        return unicode(self.__str__())
+
 
 class ProxyMethod (object):
 
@@ -102,6 +112,11 @@ class ProxyMethod (object):
         self.proxy.rpc.redis.delete(request.id)
 
         response = Response.fromBuffer(buff)
+
+        if response.error:
+            print response.error["exc_traceback"]
+            raise response.error["exc_value"]
+
         return response.result
 
     # event handling

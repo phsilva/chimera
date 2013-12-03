@@ -6,7 +6,6 @@ from chimera.core.chimeraobject import ChimeraObject
 from chimera.core.exceptions import (ChimeraException, CantPointScopeException,
                                      CanSetScopeButNotThisField, CantSetScopeException,
                                      printException)
-from chimera.core.managerlocator import ManagerLocator
 
 from chimera.interfaces.camera import Shutter
 from chimera.interfaces.telescope import SlewRate

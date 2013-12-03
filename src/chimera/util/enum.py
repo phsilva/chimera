@@ -130,9 +130,7 @@ class EnumValue(object):
 
     def __cmp__(self, other):
         result = NotImplemented
-        self_type = self.enumtype
         try:
-            assert self_type == other.enumtype
             result = cmp(self.index, other.index)
         except (AssertionError, AttributeError):
             result = NotImplemented
@@ -144,6 +142,7 @@ class EnumValue(object):
         return {"key": self.__key, "index": self.__index}
 
     def __setstate__(self, state):
+        self.__enumtype = None
         self.__index = state["index"]
         self.__key = state["key"]
 

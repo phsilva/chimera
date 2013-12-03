@@ -28,6 +28,8 @@ from chimera.interfaces.dome import Dome, Mode
 
 from chimera.core.lock    import lock
 
+from chimera.core.proxy import Proxy
+
 from chimera.core.exceptions import ObjectNotFoundException
 from chimera.core.exceptions import ChimeraException
 
@@ -137,8 +139,8 @@ class DomeBase (ChimeraObject, Dome):
     # utilitaries
     def getTelescope(self):
         try:
-            p = self.getManager().getProxy(self['telescope'], lazy=True)
-            if not p.ping():
+            p = Proxy(self['telescope'])
+            if not p.getLocation():
                 return False
             else:
                 return p

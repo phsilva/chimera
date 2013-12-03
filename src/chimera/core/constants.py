@@ -23,7 +23,7 @@ import sys
 import os
 
 MANAGER_DEFAULT_HOST = 'localhost'
-MANAGER_DEFAULT_PORT = 7666
+MANAGER_DEFAULT_PORT = 6379
 
 # annotations
 EVENT_ATTRIBUTE_NAME  = '__event__'

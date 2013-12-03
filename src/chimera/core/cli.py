@@ -1,23 +1,17 @@
-from chimera.core.version   import _chimera_version_, _chimera_description_
-from chimera.core.constants import SYSTEM_CONFIG_DEFAULT_FILENAME
-from chimera.core.location  import Location, InvalidLocationException
-
-from chimera.core.systemconfig import SystemConfig
-from chimera.core.manager      import Manager
-from chimera.core.path         import ChimeraPath
-
-from chimera.controllers.site.main import SiteController
-from chimera.core.exceptions       import ObjectNotFoundException, printException
-from chimera.core.managerlocator   import ManagerLocator, ManagerNotFoundException
-
-from chimera.util.enum      import Enum
-
 import sys
 import optparse
 import os.path
 import threading
-import socket
 import time
+
+from chimera.core.version       import _chimera_version_, _chimera_description_
+from chimera.core.location      import Location, InvalidLocationException
+from chimera.core.proxy         import Proxy
+from chimera.core.manager       import Manager
+from chimera.core.path          import ChimeraPath
+from chimera.core.exceptions    import ObjectNotFoundException, printException
+from chimera.util.enum          import Enum
+
 
 __all__ = ['ChimeraCLI',
            'Action',
@@ -304,8 +298,6 @@ class ChimeraCLI (object):
         
         self._aborting = False
 
-        self._keepRemoteManager = True
-
         # shutdown event
         self.died = threading.Event()
         
@@ -320,16 +312,7 @@ class ChimeraCLI (object):
                                     type=ParameterType.BOOLEAN, default=False,
                                     help="Display information while working"))
 
-        self.addHelpGroup("LOCALMANAGER", "Client Configuration")
-        self.addParameters(dict(name="port", short="P", helpGroup="LOCALMANAGER", default=port or 9000,
-                                help="Port to which the local Chimera instance will listen to."),
-                           dict(name="config", default=SYSTEM_CONFIG_DEFAULT_FILENAME,
-                                    help="Chimera configuration file to use. default=%default",
-                                    helpGroup="LOCALMANAGER"))
-
-        self.localManager  = None
-        self._remoteManager = None
-        self.sysconfig = None
+        self.manager  = None
 
         self._needInstrumentsPath = instrument_path
         self._needControllersPath = controllers_path
@@ -453,26 +436,7 @@ class ChimeraCLI (object):
             if abort: self.abort()
 
     def _startSystem (self, options):
-        
-        try:
-            self.sysconfig = SystemConfig.fromFile(options.config)
-            self.localManager = Manager(self.sysconfig.chimera["host"], getattr(options, 'port', 9000))
-            self._remoteManager = ManagerLocator.locate(self.sysconfig.chimera["host"], self.sysconfig.chimera["port"])
-        except ManagerNotFoundException:
-            # FIXME: better way to start Chimera
-            site = SiteController(wait=False)
-            site.startup()
-
-            self._keepRemoteManager = False
-            self._remoteManager = ManagerLocator.locate(self.sysconfig.chimera["host"], self.sysconfig.chimera["port"])
-
-    def _belongsTo(self, meHost, mePort, location):
-        
-        if not location: return False
-
-        meName = socket.gethostbyname(meHost)
-        return (location.host == None or location.host in (meHost, meName)) and \
-               (location.port == None or location.port == mePort)
+        self.manager = Manager("localhost", 6379)
 
     def _setupObjects (self, options):
 
@@ -480,7 +444,6 @@ class ChimeraCLI (object):
         instruments = dict([(x.name, x) for x in self._parameters.values() if x.type == ParameterType.INSTRUMENT])
         controllers = dict([(x.name, x) for x in self._parameters.values() if x.type == ParameterType.CONTROLLER])
 
-        # starts a local Manager (not using sysconfig) or a full sysconfig backed if needed.
         self._startSystem(self.options)
 
         # create locations
@@ -495,25 +458,22 @@ class ChimeraCLI (object):
 
             else:
                 # no instrument selected, ask remote Chimera instance for the newest
-                if self._remoteManager:
-                    insts = self._remoteManager.getResourcesByClass(inst.cls)
-                    if insts:
-                        # get the older
-                        inst.location = insts[0]
+                insts = self.manager.resourceManager.getByClass(inst.cls)
+                if insts:
+                    # get the older
+                    inst.location = insts[0].location
 
             if not inst.location and inst.required:
-                self.exit("Couldn't find %s configuration. "
-                          "Edit %s or see --help for more information" % (inst.name.capitalize(), os.path.abspath(options.config)))
-
+                self.exit("Couldn't find %s configuration." % inst.name.capitalize())
 
         for inst in instruments.values() + controllers.values():
 
             inst_proxy = None
 
             try:
-                inst_proxy = self._remoteManager.getProxy(inst.location)
+                inst_proxy = Proxy(inst.location)
             except ObjectNotFoundException:
-                if inst.required == True:
+                if inst.required:
                     self.exit("Couldn't find %s. (see --help for more information)" % inst.name.capitalize())
 
             # save values in CLI object (which users are supposed to inherites from).
@@ -523,11 +483,8 @@ class ChimeraCLI (object):
         pass
 
     def __stop__ (self, options):
-        if self.localManager:
-            self.localManager.shutdown()
-
-        if self._remoteManager and not self._keepRemoteManager:
-            self._remoteManager.shutdown()
+        if self.manager:
+            self.manager.shutdown()
 
     def _createParser (self):
 

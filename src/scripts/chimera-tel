@@ -84,16 +84,18 @@ class ChimeraTel (ChimeraCLI):
         else:
             target = self._validateCoords(options)
         
-        @callback(self.localManager)
+        @callback(self.manager)
         def slewBegin(target):
             self.out(40*"=")
             if options.objectName:
                 coords = tuple(target)
                 self.out("slewing to %s (%s %s %s)... " % (options.objectName, coords[0], coords[1], target.epochString()), end="")
+                self.out()
             else:
                 self.out("slewing to %s (%s)... " % (target, target.epochString()), end="")
+                self.out()
 
-        @callback(self.localManager)
+        @callback(self.manager)
         def slewComplete(position, status):
             if status == TelescopeStatus.OK:
                 self.out("OK.")

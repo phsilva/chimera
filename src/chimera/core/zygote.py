@@ -1,6 +1,7 @@
 import multiprocessing
 
 import signal
+import traceback
 import setproctitle
 
 from chimera.core.rpc import RedisRpc
@@ -40,6 +41,9 @@ def zygote(resource):
     # create object (lives in zygote process)
     obj = cls()
 
+    # set object identify
+    obj.__setlocation__(resource.location)
+
     # consume and execute commands
     rpc = RedisRpc(resource.location.host or "localhost",
                    resource.location.port or 6379)
@@ -57,7 +61,7 @@ def zygote(resource):
         try:
             result = method(*args, **kwargs)
         except Exception, e:
-            error = e
+            error = {"exc_type": type(e), "exc_value": e, "exc_traceback": traceback.format_exc()}
 
         if request.id is not None:
             response = Response.fromParams(request.id, result, error)

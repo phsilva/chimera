@@ -31,8 +31,7 @@ from chimera.interfaces.camera  import (CameraExpose, CameraTemperature,
                                         InvalidReadoutMode, Shutter)
 
 from chimera.controllers.imageserver.imagerequest import ImageRequest
-from chimera.controllers.imageserver.util import getImageServer
-
+from chimera.core.proxy import Proxy
 from chimera.core.lock import lock
 
 from chimera.util.image import Image, ImageUtil
@@ -92,7 +91,7 @@ class CameraBase (ChimeraObject,
                                  imageRequest["window"])
 
         # use image server if any and save image on server's default dir if filename given as a relative path.
-        server = getImageServer(self.getManager())
+        server = Proxy("/ImageServer/0")
         if not os.path.isabs(imageRequest["filename"]):
             imageRequest["filename"] = os.path.join(server.defaultNightDir(), imageRequest["filename"])
 
@@ -100,7 +99,6 @@ class CameraBase (ChimeraObject,
         self.abort.clear()
 
         images = []
-        manager = self.getManager()
 
         for frame_num in range(frames):
 
@@ -108,7 +106,7 @@ class CameraBase (ChimeraObject,
             if self.abort.isSet():
                 return tuple(images)
 
-            imageRequest.beginExposure(manager)
+            imageRequest.beginExposure()
             self._expose(imageRequest)
 
             # [ABORT POINT]
@@ -118,7 +116,7 @@ class CameraBase (ChimeraObject,
             image = self._readout(imageRequest)
             if image is not None:
                 images.append(image)
-                imageRequest.endExposure(manager)
+                imageRequest.endExposure()
 
             # [ABORT POINT]
             if self.abort.isSet():
@@ -197,7 +195,7 @@ class CameraBase (ChimeraObject,
                  'CCD Y Pixel Size [micrometer]')]
 
         # register image on ImageServer
-        server = getImageServer(self.getManager())
+        server = Proxy("/ImageServer/0")
         proxy = server.register(img)
 
         # and finally compress the image

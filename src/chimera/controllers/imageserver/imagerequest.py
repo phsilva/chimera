@@ -1,10 +1,10 @@
+import logging
 
 from chimera.interfaces.camera import (Shutter, Bitpix)
-
 from chimera.core.exceptions import ChimeraValueError, ObjectNotFoundException
+from chimera.core.proxy import Proxy
+from chimera.core.resources import ResourceManager
 
-import logging
-import chimera.core.log
 log = logging.getLogger(__name__)
 
 
@@ -102,48 +102,49 @@ class ImageRequest (dict):
                                                                     self['frames'],
                                                                     self['shutter'],
                                                                     self['type']))
-    def beginExposure (self, manager):
+    def beginExposure (self):
 
-        self._fetchPreHeaders(manager)
+        self._fetchPreHeaders()
 
         if self["wait_dome"]:
             try:
-                dome = manager.getProxy("/Dome/0")
+                dome = Proxy("/Dome/0")
                 dome.syncWithTel()
                 log.debug("Dome slit position synchronized with telescope position.")
                 
             except ObjectNotFoundException:
                 log.info("No dome present, taking exposure without dome sync.")
 
-    def endExposure(self, manager):
-        self._fetchPostHeaders(manager)
+    def endExposure(self):
+        self._fetchPostHeaders()
 
-    def _fetchPreHeaders (self, manager):
+    def _fetchPreHeaders (self):
         auto = []
+
+        resourceManager = ResourceManager("localhost", 6379)
+
         if self.auto_collect_metadata:
             for cls in ('Site', 'Camera', 'Dome', 'FilterWheel', 'Focuser', 'Telescope'):
-                locations = manager.getResourcesByClass(cls)
-                if len(locations) == 1:
-                    auto.append(str(locations[0]))
-                elif len(locations) == 0:
+                resources = resourceManager.getByClass(cls)
+                if len(resources) == 1:
+                    auto.append(str(resources[0].location))
+                elif len(resources) == 0:
                     log.warning("No %s available, header would be incomplete." % cls)
                 else:
                     log.warning("More than one %s available, header may be incorrect. Using the first %s." % (cls, cls))
-                    auto.append(str(locations[0]))
+                    auto.append(str(resources[0].location))
                     
-            self._getHeaders(manager, auto+self.metadataPre)
+            self._getHeaders(auto+self.metadataPre)
 
-    def _fetchPostHeaders (self, manager):
-        self._getHeaders(manager, self.metadataPost)
+    def _fetchPostHeaders (self):
+        self._getHeaders()
         
-    def _getHeaders (self, manager, locations):
-
+    def _getHeaders (self, locations):
         for location in locations:
-
             if not location in self._proxies:
                 try:
-                    self._proxies[location] = manager.getProxy(location)
+                    self._proxies[location] = Proxy(location)
                 except Exception, e:
-                    log.exception('Unable to get metadata from %s' % (location))
+                    log.exception('Unable to get metadata from %s' % location)
 
             self.headers += self._proxies[location].getMetadata(self)

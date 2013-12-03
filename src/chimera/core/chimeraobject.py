@@ -34,6 +34,8 @@ from chimera.core.constants import RWLOCK_ATTRIBUTE_NAME
 
 from chimera.interfaces.lifecycle import ILifeCycle
 
+from chimera.core.proxy import Proxy
+
 import chimera.core.log
 
 import logging
@@ -50,7 +52,7 @@ class ChimeraObject(ILifeCycle):
 
     def __init__ (self):
         ILifeCycle.__init__(self)
-    
+
         # event handling
         self.__events_proxy__ = EventsProxy ()
 
@@ -83,7 +85,7 @@ class ChimeraObject(ILifeCycle):
             return self.__config_proxy__.__getitem__ (item)
         finally:
             lock.release()
-    
+
     def __setitem__ (self, item, value):
         # only one thread can write
         lock = getattr(self, RWLOCK_ATTRIBUTE_NAME)
@@ -122,9 +124,9 @@ class ChimeraObject(ILifeCycle):
 
     def notify(self, n=1):
         return getattr(self, INSTANCE_MONITOR_ATTRIBUTE_NAME).notify(n)
-    
+
     def notifyAll(self):
-        return getattr(self, INSTANCE_MONITOR_ATTRIBUTE_NAME).notifyAll()    
+        return getattr(self, INSTANCE_MONITOR_ATTRIBUTE_NAME).notifyAll()
 
     # reflection
     def __get_events__ (self):
@@ -135,12 +137,11 @@ class ChimeraObject(ILifeCycle):
 
     def __get_config__ (self):
         return getattr(self, CONFIG_PROXY_NAME).items()
-    
+
     # ILifeCycle implementation
     def __start__ (self):
-        raise ChimeraException("pqp")
         return True
-        
+
     def __stop__ (self):
         return True
 
@@ -198,15 +199,14 @@ class ChimeraObject(ILifeCycle):
         return self.__location__
 
     def __setlocation__ (self, location):
-        location = Location(location)
-        self.__location__ = location
+        self.__location__ = Location(location)
         return True
 
     def getMetadata(self, request):
         return []
 
+    def getProxy(self):
+        return Proxy(self.getLocation())
+
     def __str__(self):
         return "<ChimeraObject %s (%x)>" % (str(self.getLocation()), id())
-
-    def __unicode__(self):
-        return unicode(self.__str__())

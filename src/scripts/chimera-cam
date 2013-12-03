@@ -19,20 +19,18 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-from chimera.core.cli import ChimeraCLI, action, ParameterType
-from chimera.core.callback import callback
-from chimera.core.exceptions import printException, ObjectNotFoundException
-from chimera.core.compat import freeze_support
-
-from chimera.interfaces.filterwheel import InvalidFilterPositionException
-from chimera.interfaces.camera import CameraFeature, CameraStatus
-
-from chimera.util.ds9 import DS9
-
 import sys
 import time
-import threading
 import copy
+
+from chimera.core.cli import ChimeraCLI, action, ParameterType
+from chimera.core.callback import callback
+from chimera.core.proxy import Proxy
+from chimera.core.exceptions import printException, ObjectNotFoundException
+from chimera.interfaces.filterwheel import InvalidFilterPositionException
+from chimera.interfaces.camera import CameraFeature, CameraStatus
+from chimera.util.ds9 import DS9
+
 
 currentFrame = 0
 currentFrameExposeStart = 0
@@ -355,7 +353,7 @@ class ChimeraCam (ChimeraCLI):
                 self.err("Problems starting DS9. DIsplay disabled.")
 
 
-        @callback(self.localManager)
+        @callback(self.manager)
         def exposeBegin(request):
             global currentFrame, currentFrameExposeStart
             currentFrameExposeStart = time.time()
@@ -364,19 +362,19 @@ class ChimeraCam (ChimeraCLI):
             self.out("[%03d/%03d] [%s]" % (currentFrame, options.frames, time.strftime("%c")))
             self.out("exposing (%.3fs) ..." % request["exptime"], end="")
 
-        @callback(self.localManager)
+        @callback(self.manager)
         def exposeComplete(request, status):
             global currentFrameExposeStart
             if status == CameraStatus.OK:
                 self.out("OK (took %.3f s)" % (time.time()-currentFrameExposeStart))
 
-        @callback(self.localManager)
+        @callback(self.manager)
         def readoutBegin(request):
             global currentFrameReadoutStart
             currentFrameReadoutStart = time.time()
             self.out("reading out and saving ...", end="")
 
-        @callback(self.localManager)
+        @callback(self.manager)
         def readoutComplete(image, status):
             global currentFrame, currentFrameExposeStart, currentFrameReadoutStart
 
@@ -398,24 +396,20 @@ class ChimeraCam (ChimeraCLI):
         camera.readoutComplete += readoutComplete
 
         # do we have a Dome?
-        dome = None
-        try:
-            dome = camera.getManager().getProxy("/Dome/0")
-        except ObjectNotFoundException:
-            pass
+        dome = Proxy("/Dome/0")
 
-        if dome:
-            @callback(self.localManager)
-            def syncBegin():
-                self.out("="*40)
-                self.out("synchronizing dome slit ...", end="")
-
-            @callback(self.localManager)
-            def syncComplete():
-                self.out("OK")
-
-            dome.syncBegin += syncBegin
-            dome.syncComplete += syncComplete
+        #if dome:
+        #    @callback(self.manager)
+        #    def syncBegin():
+        #        self.out("="*40)
+        #        self.out("synchronizing dome slit ...", end="")
+        #
+        #    @callback(self.manager)
+        #    def syncComplete():
+        #        self.out("OK")
+        #
+        #    dome.syncBegin += syncBegin
+        #    dome.syncComplete += syncComplete
 
         self.out(40*"=")
         self.out("Taking %d %s frame[s]" % (options.frames, imagetype.upper()))
@@ -510,6 +504,5 @@ def main():
     cli.wait()
     
 if __name__ == '__main__':
-    freeze_support()
     main()
     

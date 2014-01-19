@@ -20,8 +20,9 @@
 
 from chimera.util.position import Position
 
-import chimera.util.etree.ElementTree as ET
 from chimera.core.exceptions import ObjectNotFoundException
+
+import xml.etree.ElementTree as ET
 from xml.parsers.expat import ExpatError
 
 import chimera.core.log

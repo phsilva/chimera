@@ -164,19 +164,22 @@ class FakeCamera (CameraBase, FilterWheelBase):
          width, height) = self._getReadoutModeInfo(imageRequest["binning"],
                                                    imageRequest["window"])
         self.readoutBegin(imageRequest)
-        
-        telescopes = self.getManager().getResourcesByClass("Telescope")
-        if telescopes:
-            telescope = self.getManager().getProxy(telescopes[0])
-        else:
-            telescope = None
 
-        domes = self.getManager().getResourcesByClass("Dome")
-        if domes:
-            dome = self.getManager().getProxy(domes[0])
-        else:
-            dome = None
-        
+        #telescopes = self.getManager().getResourcesByClass("Telescope")
+        #if telescopes:
+        #    telescope = self.getManager().getProxy(telescopes[0])
+        #else:
+        #    telescope = None
+        #
+        #domes = self.getManager().getResourcesByClass("Dome")
+        #if domes:
+        #    dome = self.getManager().getProxy(domes[0])
+        #else:
+        #    dome = None
+
+
+        telescope = dome = None
+
         if not telescope:
             self.log.debug("FakeCamera couldn't find telescope.")
         if not dome:
@@ -184,13 +187,13 @@ class FakeCamera (CameraBase, FilterWheelBase):
 
         ccd_width, ccd_height = self.getPhysicalSize()
         
-        if (imageRequest["type"].upper() == "DARK"):
+        if imageRequest["type"].upper() == "DARK":
             self.log.info("making dark")
             pix = self.make_dark((ccd_height, ccd_width), N.float, imageRequest['exptime'])
-        elif (imageRequest["type"].upper() == "FLAT"):
+        elif imageRequest["type"].upper() == "FLAT":
             self.log.info("making flat")
             pix = (self.make_flat((ccd_height,ccd_width), N.float)/1000)
-        elif (imageRequest["type"].upper() == "BIAS"):
+        elif imageRequest["type"].upper() == "BIAS":
             self.log.info("making bias")
             pix = self.make_dark((ccd_height, ccd_width), N.float, 0)
         else:
@@ -202,7 +205,7 @@ class FakeCamera (CameraBase, FilterWheelBase):
                     telAZ=telescope.getAz().toD()
 
                     self.log.debug("Dome AZ: "+str(domeAZ)+"  Tel AZ: "+str(telAZ))
-                    if (abs(domeAZ-telAZ) <= 3):
+                    if abs(domeAZ-telAZ) <= 3:
                         self.log.debug("Dome & Slit aligned -- getting DSS")
                         url = "http://stdatu.stsci.edu/cgi-bin/dss_search?"
                         query_args = {"r": telescope.getRa().strfcoord('%(h)02d:%(m)02d:%(s)04d'),
@@ -249,7 +252,7 @@ class FakeCamera (CameraBase, FilterWheelBase):
 
         # without telescope/dome, or if dome/telescope aren't aligned, or the dome is closed
         # or we otherwise failed, just make a flat pattern with dark noise
-        if (pix == None):
+        if pix is None:
             try:
                 self.log.info("Making flat image: " + str(ccd_height) + "x" + str(ccd_width))
                 pix = self.make_flat((ccd_height,ccd_width), N.float)
@@ -257,7 +260,7 @@ class FakeCamera (CameraBase, FilterWheelBase):
                 self.log.warning("Make flat error: " + str(e))
         
         # Last resort if nothing else could make a picture
-        if (pix == None):
+        if pix is None:
             pix = N.zeros((ccd_height,ccd_width), dtype=N.int32)
 
         proxy = self._saveImage(imageRequest, pix, {"frame_start_time": self.__lastFrameStart,
@@ -317,7 +320,7 @@ class FakeCamera (CameraBase, FilterWheelBase):
         return self._adcs
 
     def getPhysicalSize(self):
-        return (self["ccd_width"], self["ccd_height"])
+        return self["ccd_width"], self["ccd_height"]
 
     def getPixelSize(self):
         return (9,9)

@@ -22,10 +22,8 @@
 - exceptions
 - expire nos keys
 - como lidar com multiplos managers?
-- uuid or location?
 - jsonpickle em tudo?
 - testar api JS?
-- eventos
 - como cancelar açõs se o zygoto é single-threaded?
 
 - cenários:
@@ -61,7 +59,7 @@
 
             print slew.result()
 
-        eventos:
+        OK eventos:
             mecanismo entre ChimeraObject's para aviso de mudança de status
 
             @callback é um atalho para adicionar um novo ChimeraObject com apenas um método definido.
@@ -71,11 +69,6 @@
                 Na invocação, o publisher utilizará um rpushx para cada objeto inscrito no evento (x para garantir que proxies que já morreram não acumulem mensagens).
 
                 O objeto, por sua vez, deve possuir um zygoto papando os requets e disparando (cada um em sua thread) os métodos requisitados.
-
-cenário:
-
-Linux com chimerad e chimera rodando câmera SBIG USB.
-Windows com TheSky + Paramount ME e chimera.
 
 30/11/2013
 

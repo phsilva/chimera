@@ -1,8 +1,10 @@
 import multiprocessing
+import concurrent.futures
 
 import signal
 import traceback
 import setproctitle
+import Queue
 
 from chimera.core.rpc import RedisRpc
 from chimera.core.jsonrpc import Request, Response
@@ -27,6 +29,29 @@ def multi_getattr(obj, attr, default = None):
                 raise
     return obj
 
+def zygote_worker(request, resource, obj):
+    # consume and execute commands
+    rpc = RedisRpc(resource.location.host or "localhost",
+                   resource.location.port or 6379)
+
+
+    method = multi_getattr(obj, request.method)
+    args, kwargs = request.params
+
+    result = None
+    error = None
+
+    try:
+        result = method(*args, **kwargs)
+    except Exception, e:
+        error = {"exc_type": type(e), "exc_value": e, "exc_traceback": traceback.format_exc()}
+
+    if request.id is not None:
+        response = Response.fromParams(request.id, result, error)
+        rpc.send(response.id, response)
+
+    return True
+
 def zygote(resource):
     # identity
     setproctitle.setproctitle("[%s]" % resource.location)
@@ -44,31 +69,26 @@ def zygote(resource):
     # set object identify
     obj.__setlocation__(resource.location)
 
-    # consume and execute commands
-    rpc = RedisRpc(resource.location.host or "localhost",
-                   resource.location.port or 6379)
+    #
+    # request machinery
+    #
 
-    while True:
+    rpc = RedisRpc(resource.location.host or "localhost", resource.location.port or 6379)
+
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+    die = multiprocessing.Event()
+
+    while not die.is_set():
         _, buff = rpc.recv(resource.location)
+
         request = Request.fromBuffer(buff)
 
-        method = multi_getattr(obj, request.method)
-        args, kwargs = request.params
-
-        result = None
-        error = None
-
-        try:
-            result = method(*args, **kwargs)
-        except Exception, e:
-            error = {"exc_type": type(e), "exc_value": e, "exc_traceback": traceback.format_exc()}
-
-        if request.id is not None:
-            response = Response.fromParams(request.id, result, error)
-            rpc.send(response.id, response)
+        pool.submit(zygote_worker, request=request, resource=resource, obj=obj)
 
         if request.method == "__stop__":
-            break
+            die.set()
+
+    pool.shutdown(wait=True)
 
 class Zygote:
 

@@ -13,5 +13,5 @@ class RedisRpc:
     def send(self, queue, data):
         return self.redis.rpush(str(queue), str(data))
 
-    def recv(self, queue):
-        return self.redis.blpop(str(queue))
+    def recv(self, queue, timeout=0):
+        return self.redis.blpop(str(queue), timeout=timeout)

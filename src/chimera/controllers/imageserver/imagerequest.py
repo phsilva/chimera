@@ -137,7 +137,7 @@ class ImageRequest (dict):
             self._getHeaders(auto+self.metadataPre)
 
     def _fetchPostHeaders (self):
-        self._getHeaders()
+        self._getHeaders(self.metadataPost)
         
     def _getHeaders (self, locations):
         for location in locations:

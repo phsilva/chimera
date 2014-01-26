@@ -138,14 +138,7 @@ class DomeBase (ChimeraObject, Dome):
 
     # utilitaries
     def getTelescope(self):
-        try:
-            p = Proxy(self['telescope'])
-            if not p.getLocation():
-                return False
-            else:
-                return p
-        except ObjectNotFoundException:
-            return False
+        return None
 
     def control (self):
 
@@ -239,8 +232,10 @@ class DomeBase (ChimeraObject, Dome):
         self.syncBegin()
 
         if self.getMode() != Mode.Stand:
-            self._telescopeChanged(self._tel.getAz())
-            self._processQueue()
+            tel = self.getTelescope()
+            if tel:
+                self._telescopeChanged(tel.getAz())
+                self._processQueue()
 
         self.syncComplete()
 

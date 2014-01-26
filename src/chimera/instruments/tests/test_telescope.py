@@ -43,7 +43,6 @@ def assertEpsEqual (a, b, e=60):
     assert abs(a.AS-b.AS) <= e
 
 import chimera.core.log
-chimera.core.log.setConsoleLevel(1e10)
 log = logging.getLogger("chimera.tests")
 
 # hack for event  triggering asserts
@@ -283,10 +282,13 @@ class TestFakeTelescope(FakeHardwareTest, TelescopeTest):
 
         self.manager = Manager(port=8000)
 
-        self.manager.addClass(Site, "lna", {"name": "UFSC",
-                                            "latitude": "-27 36 13 ",
-                                            "longitude": "-48 31 20",
-                                            "altitude": "20"})
+        site = self.manager.addClass(Site, "lna")
+        site += {
+            "name": "UFSC",
+            "latitude": "-27 36 13 ",
+            "longitude": "-48 31 20",
+            "altitude": "20"
+        }
 
         from chimera.instruments.faketelescope import FakeTelescope
         self.manager.addClass(FakeTelescope, "fake")

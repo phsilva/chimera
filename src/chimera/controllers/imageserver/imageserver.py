@@ -67,19 +67,20 @@ class ImageServer(ChimeraObject):
                 self.register(Image.fromFile(file))
 
     def register(self, image):
-        if "CHM_ID" in image:
-            image.setGUID(image["CHM_ID"])
-        else:
-            image += ("CHM_ID", image.GUID())
-            image.save()
+        #if "CHM_ID" in image:
+        #    image.setGUID(image["CHM_ID"])
+        #else:
+        #    image += ("CHM_ID", image.GUID())
+        #    image.save()
             
-        self.getDaemon().connect(image)
-        self.imagesByID[image.GUID()]    = image
-        self.imagesByPath[image.filename()] = image
-
-        # save Image's HTTP address
-        image.http(self.getHTTPByID(image.GUID()))
-        return image.getProxy()
+        #self.getDaemon().connect(image)
+        ##self.imagesByID[image.GUID()]    = image
+        ##self.imagesByPath[image.filename()] = image
+        ##
+        ### save Image's HTTP address
+        ##image.http(self.getHTTPByID(image.GUID()))
+        #return image.getProxy()
+        return image
 
     def unregister(self, image):
         self.getDaemon().disconnect(image)

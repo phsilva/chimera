@@ -106,6 +106,7 @@ setup(name='chimera-python',
                           "setproctitle",
                           "jsonpickle",
                           "redis",
+                          "futures",
                           "Pyro"] + linux_deps + win32_deps + mac_deps + linux_cdeps + win32_cdeps + mac_cdeps + ["numpy"],
 
       tests_require    = ["nose", "coverage"],

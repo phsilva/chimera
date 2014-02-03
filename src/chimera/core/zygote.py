@@ -1,14 +1,14 @@
 import multiprocessing
-import concurrent.futures
-
 import signal
 import traceback
 import setproctitle
-import Queue
+
+import concurrent.futures
 
 from chimera.core.rpc import RedisRpc
 from chimera.core.jsonrpc import Request, Response
 from chimera.core.classloader import ClassLoader
+
 
 def multi_getattr(obj, attr, default = None):
     """
@@ -76,9 +76,8 @@ def zygote(resource):
     rpc = RedisRpc(resource.location.host or "localhost", resource.location.port or 6379)
 
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
-    die = multiprocessing.Event()
 
-    while not die.is_set():
+    while True:
         _, buff = rpc.recv(resource.location)
 
         request = Request.fromBuffer(buff)
@@ -86,7 +85,7 @@ def zygote(resource):
         pool.submit(zygote_worker, request=request, resource=resource, obj=obj)
 
         if request.method == "__stop__":
-            die.set()
+            break
 
     pool.shutdown(wait=True)
 

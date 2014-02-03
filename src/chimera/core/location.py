@@ -20,7 +20,6 @@
 
 import urlparse
 import types
-import string
 
 from chimera.core.exceptions import InvalidLocationException
 
@@ -74,7 +73,7 @@ class Location(object):
         if not isinstance(loc, Location):
             loc = Location(loc)
 
-        return (loc.cls.lower() == self.cls.lower()) and (loc.name == self.name)
+        return (loc.cls == self.cls) and (loc.name == self.name)
 
     def __ne__ (self, loc):
         return not self.__eq__ (loc)

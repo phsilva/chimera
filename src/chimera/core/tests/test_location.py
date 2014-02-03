@@ -95,6 +95,11 @@ class TestLocation(object):
         # equality tests apply only to class and name
         assert l3 != l4
 
+        l5 = Location('//host.com.br:1000/class/name')
+        l6 = Location('//host.com.br:1000/Class/name')
+
+        assert l5 != l6
+
     def test_valid(self):
 
         valid = ["/Class/other",

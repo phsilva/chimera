@@ -26,6 +26,7 @@ from chimera.core.jsonrpc import Request, Response
 from chimera.core.resources import ResourceManager
 from chimera.core.location import Location
 from chimera.core.constants import EVENTS_PROXY_NAME
+from chimera.core.exceptions import ChimeraException
 
 __all__ = ['Proxy',
            'ProxyMethod']
@@ -106,6 +107,7 @@ class ProxyMethod (object):
 
         self.proxy.rpc.send(self.proxy.location, request)
 
+        # TODO: add timeout here.
         _, buff = self.proxy.rpc.recv(request.id)
 
         # discard request queue as it will not be reused, could use expire, but what is the right (tm) timeout?
@@ -114,8 +116,7 @@ class ProxyMethod (object):
         response = Response.fromBuffer(buff)
 
         if response.error:
-            print response.error["exc_traceback"]
-            raise response.error["exc_value"]
+            raise ChimeraException("Exception calling Proxy method.", response.error["exc_cause"])
 
         return response.result
 

@@ -35,7 +35,16 @@ import time
 import collections
 import jsonpickle
 
-Resource = collections.namedtuple("Resource", ["location", "bases", "created"])
+class Resource(object):
+
+    def __init__(self, location, bases, created):
+        self.location = location
+        self.bases = bases
+        self.created = created
+
+    def __eq__(self, other):
+        return self.location == other.location and self.bases == other.bases
+
 
 class ResourceManager(object):
 

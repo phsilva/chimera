@@ -75,9 +75,11 @@ class MethodWrapperDispatcher (object):
         self.cls      = cls
 
         # go duck, go!
-        self.bound_name = "<bound method %s.%s.begin of %s>" % (self.cls.__name__,
-                                                                self.func.func_name,
-                                                                repr(self.instance))
+        self.bound_name = "<bound method %s.%s of %s>" % (
+            self.cls.__name__,
+            self.func.func_name,
+            repr(self.instance)
+        )
 
         self.unbound_name = "<unbound method %s.%s>" % (self.cls.__name__, self.func.func_name)
 
@@ -89,7 +91,6 @@ class MethodWrapperDispatcher (object):
         
 
     def  __call__ (self, *args, **kwargs):
-
         # handle unbound cases (with or without instance as first argument)
         if not self.instance:
 
@@ -104,7 +105,6 @@ class MethodWrapperDispatcher (object):
                 return self.call(args[0], *args[1:], **kwargs)
 
         #log.debug("[calling] %s %s" % (self.instance, self.func.__name__))
-
         return self.call(self.instance, *args, **kwargs)
 
     # override this to implement custom behaviour (default just wrap without tricks)

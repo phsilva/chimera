@@ -143,7 +143,6 @@ class Manager:
         @return: retuns a proxy for the object if sucessuful.
         @rtype: Proxy
         """
-
         if type(location) != Location:
             location = Location(location)
 

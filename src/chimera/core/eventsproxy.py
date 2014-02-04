@@ -34,16 +34,15 @@ class EventsProxy:
         self.rpc = RedisRpc("localhost", 6379)
         self.handlers = {}
 
-    def subscribe (self, topic, handler):
+    def subscribe(self, topic, handler):
         if topic not in self.handlers:
             self.handlers[topic] = []
 
-        if handler not in self.handlers[topic]:
-            self.handlers[topic].append(handler)
+        self.handlers[topic].append(handler)
 
         return True
 
-    def unsubscribe (self, topic, handler):
+    def unsubscribe(self, topic, handler):
         if not topic in self.handlers:
             return True
 
@@ -54,7 +53,7 @@ class EventsProxy:
 
         return True
 
-    def publish (self, topic, *args, **kwargs):
+    def publish(self, topic, *args, **kwargs):
         if topic not in self.handlers:
             return True
 

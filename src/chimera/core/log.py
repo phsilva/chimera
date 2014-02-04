@@ -32,8 +32,6 @@ try:
 except ImportError:
     import StringIO
 
-from chimera.core.exceptions import printException
-
 
 __all__ = ['setConsoleLevel']
 

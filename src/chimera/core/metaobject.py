@@ -61,7 +61,6 @@ class MetaObject (type):
         for name, obj in _dict.iteritems():
             
             if hasattr(obj, '__call__') and not name.startswith('_'):
-                
                 # events
                 if hasattr(obj, EVENT_ATTRIBUTE_NAME):
                     _dict[name] = MethodWrapper(obj, dispatcher=EventWrapperDispatcher)
@@ -70,11 +69,6 @@ class MetaObject (type):
                 # auto-locked methods
                 elif hasattr(obj, LOCK_ATTRIBUTE_NAME):
                     _dict[name] = MethodWrapper(obj, dispatcher=LockWrapperDispatcher)
-                    methods.append(name)
-
-                # normal objects
-                else:
-                    _dict[name] = MethodWrapper(obj, dispatcher=MethodWrapperDispatcher)
                     methods.append(name)
 
         # save our helper atributes to allow better remote reflection (mainly to Console)

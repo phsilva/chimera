@@ -91,6 +91,9 @@ class TestResources(object):
 
         # get by class
         found = self.res.getByClass ("Location")
+
+        print entries
+        print found
         
         assert (entries == found)
 

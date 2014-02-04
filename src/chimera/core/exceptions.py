@@ -1,63 +1,38 @@
+#! /usr/bin/env python
+# -*- coding: iso-8859-1 -*-
 
-import sys
+# chimera - observatory automation system
+# Copyright (C) 2006-2007  P. Henrique Silva <henrique@astro.ufsc.br>
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 import traceback
 
-def printException (e, stream=sys.stdout):
 
-    print >> stream, ''.join(strException(e))
+class ChimeraException(Exception):
+    def __init__(self, message, cause=None):
+        Exception.__init__(self, message)
+        self.cause = cause
 
-    if hasattr(e, 'cause') and getattr(e, 'cause') != None:
-        print >> stream, "Caused by:",
-        print >> stream, ''.join(e.cause)
-
-        
-def strException (e):
-
-    def formatRemoteTraceback(remote_tb_lines) :
-        result = []
-        result.append(" +--- Remote traceback:")
-        for line in remote_tb_lines :
-            if line.endswith("\n"):
-                line=line[:-1]
-            lines = line.split("\n")
-
-            for line in lines :
-                result.append("\n | ")
-                result.append(line)
-
-        result.append("\n +--- End of remote traceback")
-        return result
-
-    # almost copied form Pyro to allow personalization on format
-    try:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        # remote_tb = getattr(e, Pyro.constants.TRACEBACK_ATTRIBUTE, None)
-        remote_tb = False
-        local_tb = traceback.format_exception(exc_type, exc_value, exc_tb)
-        
-        if remote_tb:
-            remote_tb=formatRemoteTraceback(remote_tb)
-            return local_tb + remote_tb
-        else:
-            # hmm. no remote tb info, return just the local tb.
-            return local_tb
-    finally:
-        # clean up cycle to traceback, to allow proper GC
-        del exc_type, exc_value, exc_tb
-
-
-# exceptions hierarchy
-
-class ChimeraException (Exception):
-
-    def __init__ (self, message="", *args):
-        Exception.__init__ (self, message, *args)
-
-        if not all(sys.exc_info()):
-            self.cause = None
-        else:
-            self.cause = strException(sys.exc_info()[1])
-
+    def printStackTrace(self):
+        traceback.print_exc()
+        if self.cause is not None:
+            print '-'*60        
+            print "Caused by (remote traceback):"
+            print '-'*60        
+            print self.cause
 
 class InvalidLocationException(ChimeraException):
     pass

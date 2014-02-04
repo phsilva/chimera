@@ -29,74 +29,103 @@ def multi_getattr(obj, attr, default = None):
                 raise
     return obj
 
-def zygote_worker(request, resource, obj):
-    # consume and execute commands
-    rpc = RedisRpc(resource.location.host or "localhost",
-                   resource.location.port or 6379)
 
+class ZygoteProcess(object):
 
-    method = multi_getattr(obj, request.method)
-    args, kwargs = request.params
+    def __init__(self, location):
+        self.location = location
 
-    result = None
-    error = None
+        # identity
+        setproctitle.setproctitle("[%s]" % self.location)
 
-    try:
-        result = method(*args, **kwargs)
-    except Exception, e:
-        error = {"exc_type": type(e), "exc_value": e, "exc_traceback": traceback.format_exc()}
+        # ignore ctrl-c
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    if request.id is not None:
-        response = Response.fromParams(request.id, result, error)
-        rpc.send(response.id, response)
+        # load class
+        loader = ClassLoader()
+        cls = loader.loadClass(self.location.cls)
 
-    return True
+        # create object (lives in zygote process)
+        self.obj = cls()
 
-def zygote(resource):
-    # identity
-    setproctitle.setproctitle("[%s]" % resource.location)
+        self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+        self.rpc = RedisRpc(self.location.host or "localhost", self.location.port or 6379)
+        self.requests = {}
 
-    # ignore ctrl-c
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+        # set object identify
+        self.obj.__setlocation__(self.location)
 
-    # load class
-    loader = ClassLoader()
-    cls = loader.loadClass(resource.location.cls)
+    def run(self):
+        # objects main loop
+        # FIXME: general event log if something goes wrong with this guy?        
+        main_future = self.pool.submit(self.obj.__main__)
 
-    # create object (lives in zygote process)
-    obj = cls()
+        # request/reply loop
+        while True:
+            _, buff = self.rpc.recv(self.location)
+            request = Request.fromBuffer(buff)
 
-    # set object identify
-    obj.__setlocation__(resource.location)
+            future = self.pool.submit(self.process_request, request=request)
 
-    #
-    # request machinery
-    #
+            # do this first, cause callback might be called immediately if request already finished
+            self.requests[future] = request
 
-    rpc = RedisRpc(resource.location.host or "localhost", resource.location.port or 6379)
+            future.add_done_callback(self.request_finished)
 
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+            if request.method == "__stop__":
+                break
 
-    while True:
-        _, buff = rpc.recv(resource.location)
+        # quit control loop first
+        self.obj.__abort_loop__()
 
-        request = Request.fromBuffer(buff)
+        # then quit any pending requests
+        self.pool.shutdown(wait=True)
 
-        pool.submit(zygote_worker, request=request, resource=resource, obj=obj)
+    def process_request(self, request):
+        # consume and execute commands
+        rpc = RedisRpc(self.location.host or "localhost",
+                       self.location.port or 6379)
+        result = None
+        error = None
 
-        if request.method == "__stop__":
-            break
+        try:
+            method = multi_getattr(self.obj, request.method)
+            args, kwargs = request.params            
+            result = method(*args, **kwargs)
+        except Exception, e:
+            error = {"exc_cause": traceback.format_exc()}
 
-    pool.shutdown(wait=True)
+        if request.id is not None:
+            response = Response.fromParams(request.id, result, error)
+            rpc.send(response.id, response)
+
+        return True
+
+    def request_finished(self, future):
+        exc = future.exception()
+        if exc:
+            rpc = RedisRpc(self.location.host or "localhost", self.location.port or 6379)
+            request = self.requests[future]
+
+            if request.id is not None:
+                response = Response.fromParams(request.id, None, {"exc_cause": "XXX"})
+                rpc.send(response.id, response)
+
+        del self.requests[future]
+
+def zygote(location):
+    zygo_proc = ZygoteProcess(location)
+    zygo_proc.run()
+
 
 class Zygote:
 
-    def __init__(self, resource):
+    def __init__(self, location):
         self.process = None
-        self.resource = resource
+        self.location = location
 
     def start(self):
-        self.process = multiprocessing.Process(target=zygote,args=(self.resource,))
+        self.process = multiprocessing.Process(target=zygote,args=(self.location,))
         self.process.start()
 
     def stop(self):

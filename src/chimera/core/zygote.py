@@ -63,13 +63,21 @@ class ZygoteProcess(object):
         # request/reply loop
         while True:
             _, buff = self.rpc.recv(self.location)
-            request = Request.fromBuffer(buff)
+            request = None
+
+            try:
+                request = Request.fromBuffer(buff)
+            except Exception, e:
+                # TODO:how to inform requester that a parser error occured?
+                continue
 
             future = self.pool.submit(self.process_request, request=request)
 
             # do this first, cause callback might be called immediately if request already finished
             self.requests[future] = request
 
+            # this will send server exceptions that might occur on request execution
+            # application exceptions are handled inside process_request
             future.add_done_callback(self.request_finished)
 
             if request.method == "__stop__":
@@ -102,13 +110,14 @@ class ZygoteProcess(object):
         return True
 
     def request_finished(self, future):
+        # check for server-side exceptions
         exc = future.exception()
         if exc:
             rpc = RedisRpc(self.location.host or "localhost", self.location.port or 6379)
             request = self.requests[future]
 
             if request.id is not None:
-                response = Response.fromParams(request.id, None, {"exc_cause": "XXX"})
+                response = Response.fromParams(request.id, None, {"exc_cause": str(exc)})
                 rpc.send(response.id, response)
 
         del self.requests[future]

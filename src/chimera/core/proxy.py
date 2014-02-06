@@ -158,8 +158,7 @@ class ProxyMethod (object):
 
         _, buff = self.proxy.rpc.recv(request.id)
 
-        # discard request queue as it will not be reused, could use expire, but what is the right (tm) timeout?
-        self.proxy.rpc.redis.delete(request.id)
+        self.proxy.rpc.redis.expire(request.id, 1)
 
         return self
 

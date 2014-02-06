@@ -8,55 +8,59 @@ import sys
 
 class TestZygote(object):
 
-	def test_messaging(self):
-		z1 = Zygote(Location("/ZygoteHelper/z1"))
-		z1.start()
+    def test_messaging(self):
+        z1 = Zygote(Location("/ZygoteHelper/z1"))
+        z1.start()
 
-		z2 = Zygote(Location("/ZygoteHelper/z2"))
-		z2.start()
+        z2 = Zygote(Location("/ZygoteHelper/z2"))
+        z2.start()
 
-		p1 = Proxy(Location("/ZygoteHelper/z1"))
-		p1.resolved = True
+        p1 = Proxy(Location("/ZygoteHelper/z1"))
+        p1.resolved = True
 
-		p2 = Proxy(Location("/ZygoteHelper/z2"))
-		p2.resolved = True
+        p2 = Proxy(Location("/ZygoteHelper/z2"))
+        p2.resolved = True
 
-		# FIXME: control starts before __start__
-		p1.__start__()
-		p2.__start__()
+        # FIXME: control starts before __start__
+        p1.__start__()
+        p2.__start__()
 
-		# sync call
-		l1 = p1.getLocation()
-		l2 = p2.getLocation()
-		assert l1 == "/ZygoteHelper/z1"
-		assert l2 == "/ZygoteHelper/z2"
+        # event handling
+        p1.someEvent += p1.someEventCallback
 
-		p1.callOtherProxy()
+        try:
+            while True:
+                # sync call
+                l1 = p1.getLocation()
+                l2 = p2.getLocation()
+                assert l1 == "/ZygoteHelper/z1"
+                assert l2 == "/ZygoteHelper/z2"
 
-		# non existing methods
-		try:
-			p1.nonExistingMethod()
-		except ChimeraException, e:
-			e.printStackTrace()
+                p1.callOtherProxy()
 
-		try:
-			p1.raiseException()
-		except ChimeraException, e:
-			e.printStackTrace()
+                # non existing methods
+                try:
+                    p1.nonExistingMethod()
+                except ChimeraException, e:
+                    e.printStackTrace()
 
-		# event handling
-		p1.someEvent += p1.someEventCallback
+                try:
+                    p1.raiseException()
+                except ChimeraException, e:
+                    e.printStackTrace()
 
-		# proxy initiated
-		p1.someEvent(42)
+                # proxy initiated
+                p1.someEvent(42)
 
-		# let control push some events too
-		time.sleep(5)
+                # let control push some events too
+                time.sleep(2)
+        except KeyboardInterrupt:
+            print "Ctrl+C ... aborting"
 
-		p1.someEvent -= p1.someEventCallback
+        p1.someEvent -= p1.someEventCallback
 
-		p1.__stop__()
-		p2.__stop__()
+        p1.__stop__()
+        p2.__stop__()
 
-		z1.stop()
-		z2.stop()
+        z1.stop()
+        z2.stop()

@@ -29,7 +29,7 @@ from chimera.core.location import Location
 from chimera.core.manager import Manager
 from chimera.core.systemconfig import SystemConfig
 from chimera.core.version import _chimera_version_, _chimera_description_
-from chimera.core.exceptions import printException, InvalidLocationException, ChimeraException
+from chimera.core.exceptions import InvalidLocationException, ChimeraException
 from chimera.core.constants import (MANAGER_DEFAULT_HOST,
                                     MANAGER_DEFAULT_PORT,
                                     SYSTEM_CONFIG_DEFAULT_FILENAME)

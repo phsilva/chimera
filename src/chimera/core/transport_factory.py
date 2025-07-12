@@ -8,7 +8,6 @@ from .transport_nng import TransportNNG
 
 from .serializer import Serializer
 from .serializer_pickle import PickleSerializer
-from .serializer_json import JSONSerializer
 
 
 if sys.platform != "win32":
@@ -32,7 +31,7 @@ def default_serializer_for_transport(transport: str) -> Type[Serializer]:
 
 
 def create_transport(url: str) -> Transport:
-    use_default_transport = not "://" in url
+    use_default_transport = "://" not in url
 
     if use_default_transport:
         url = f"{default_transport()}://{url}"

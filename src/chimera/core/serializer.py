@@ -17,7 +17,7 @@ class Serializable:
     def dump(self, serializer: Serializer) -> bytes | None:
         try:
             return serializer.dumps(self)
-        except Exception as e:
+        except Exception:
             # TODO: raise this somehow?
             return None
 

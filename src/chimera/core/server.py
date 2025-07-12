@@ -1,4 +1,3 @@
-from ast import type_param
 import operator
 import logging
 from concurrent.futures import ThreadPoolExecutor

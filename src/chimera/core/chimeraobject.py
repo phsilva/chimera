@@ -20,7 +20,6 @@ import logging
 import time
 import threading
 
-
 __all__ = ["ChimeraObject"]
 
 

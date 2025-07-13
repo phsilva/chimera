@@ -45,14 +45,13 @@ class RedisTransport(Transport):
 
     @override
     def connect(self) -> None:
-        self._r = redislite.Redis(host=self.host, port=self.port)
-        self._init_pubsub()
+        if self._r is None:
+            self._r = redislite.Redis(host=self.host, port=self.port)
+            self._init_pubsub()
 
     def _close_pubsub(self):
         if self._pubsub is not None:
             self._pubsub.close()
-
-        if self._pubsub_thread is not None:
             self._pubsub_thread.stop()
 
     @override

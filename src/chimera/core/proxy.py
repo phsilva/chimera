@@ -27,7 +27,7 @@ class Proxy:
 
     def __setstate__(self, state):
         location = state["location"]
-        log.error(f"Recreating proxy object for {location}")
+        log.warning(f"Recreating proxy object for {location}")
 
         setattr(self, "location", location)
         setattr(self, "client", Client(location))

@@ -14,6 +14,9 @@ class Client:
         self.transport = create_transport(str(location))
         self.transport.connect()
 
+    def __del__(self):
+        self.transport.close()
+
     def ping(self):
         return self.transport.ping()
 

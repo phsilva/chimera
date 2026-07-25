@@ -6,22 +6,11 @@ import time
 import pytest
 from dateutil.relativedelta import relativedelta
 
-from chimera.core.site import Site
-
 
 class TestSite:
+    # the manager fixture injects a local Site; these tests keep using the
+    # proxy on purpose: the site must stay reachable over the bus
     def test_times(self, manager):
-        manager.add_class(
-            Site,
-            "lna",
-            {
-                "name": "UFSC",
-                "latitude": "-27 36 13 ",
-                "longitude": "-48 31 20",
-                "altitude": "20",
-            },
-        )
-
         site = manager.get_proxy("/Site/0")
 
         print()
@@ -31,17 +20,6 @@ class TestSite:
 
     @pytest.mark.skip
     def test_sidereal_clock(self, manager):
-        manager.add_class(
-            Site,
-            "lna",
-            {
-                "name": "UFSC",
-                "latitude": "-27 36 13 ",
-                "longitude": "-48 31 20",
-                "altitude": "20",
-            },
-        )
-
         site = manager.get_proxy("/Site/0")
 
         times = []
@@ -59,17 +37,6 @@ class TestSite:
         print(sum(real_times) / len(real_times))
 
     def test_astros(self, manager):
-        manager.add_class(
-            Site,
-            "lna",
-            {
-                "name": "UFSC",
-                "latitude": "-27 36 13 ",
-                "longitude": "-48 31 20",
-                "altitude": "20",
-            },
-        )
-
         site = manager.get_proxy("/Site/0")
 
         print()

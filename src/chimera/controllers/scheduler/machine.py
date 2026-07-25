@@ -122,8 +122,7 @@ class Machine(threading.Thread):
 
             log.debug(f"[start] {str(task)}")
 
-            # the configured site, not a private Site(): one clock system-wide
-            site = self.controller.get_proxy(self.controller["site"])
+            site = self.controller.get_site()
             now_mjd = site.mjd()
             log.debug("[start] Current MJD is %f", now_mjd)
             if program.start_at:

@@ -13,7 +13,7 @@ import pytest
 import chimera.core.log
 from chimera.core.exceptions import ChimeraException
 from chimera.instruments.faketelescope import FakeTelescope
-from chimera.instruments.telescope import TelescopeBase
+from chimera.instruments.telescope import TelescopeBase, axes
 from chimera.interfaces.telescope import TelescopeStatus
 from chimera.util.coord import Coord
 from chimera.util.position import Epoch, Position
@@ -424,3 +424,78 @@ class TestPierFlip:
         telescope.slew_error = None
         telescope.control()
         assert telescope.slews == [(12.0, -30.0, 2000)]
+
+
+class TestAxesHelper:
+    """The axis-vocabulary helper in chimera.instruments.telescope.
+
+    The axis interfaces take one canonical (roll, pitch) pair so the WS
+    schema stays typed; `axes` is what lets a call site read in whichever
+    vocabulary its author thinks in.
+    """
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"roll": 1.5, "pitch": -2.5},
+            {"ha": 1.5, "dec": -2.5},
+            {"az": 1.5, "alt": -2.5},
+            {"axis1": 1.5, "axis2": -2.5},
+            {"primary": 1.5, "secondary": -2.5},
+        ],
+        ids=["roll_pitch", "ha_dec", "az_alt", "axis1_axis2", "primary_secondary"],
+    )
+    def test_every_vocabulary_normalises_to_roll_pitch(self, kwargs):
+        assert axes(**kwargs) == (1.5, -2.5)
+
+    def test_zero_is_a_value_not_an_absence(self):
+        # The whole point of set_axis_rate(0, 0) is "stop offsetting", so a
+        # falsy-but-present rate must survive.
+        assert axes(roll=0.0, pitch=0.0) == (0.0, 0.0)
+        assert axes(ha=0.0, dec=-1.0) == (0.0, -1.0)
+
+    def test_no_arguments_is_an_error(self):
+        with pytest.raises(ValueError, match="needs one pair"):
+            axes()
+
+    @pytest.mark.parametrize(
+        "kwargs", [{"ha": 1.0}, {"dec": 1.0}, {"roll": 1.0}, {"secondary": 1.0}]
+    )
+    def test_half_a_pair_is_an_error(self, kwargs):
+        with pytest.raises(ValueError, match="without"):
+            axes(**kwargs)
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"ha": 1.0, "alt": 2.0},
+            {"roll": 1.0, "pitch": 2.0, "az": 3.0},
+            {"axis1": 1.0, "secondary": 2.0},
+        ],
+    )
+    def test_mixing_vocabularies_is_an_error(self, kwargs):
+        # Deliberately not resolved by precedence: asking in two vocabularies
+        # at once is a bug in the caller, and picking a winner would hide it.
+        with pytest.raises(ValueError, match="mixes axis vocabularies"):
+            axes(**kwargs)
+
+
+class TestTelescopeBaseAxisStubs:
+    """TelescopeBase gained three interfaces; a driver that does not
+    implement them should fail honestly rather than silently."""
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda t: t.get_axis_counts(),
+            lambda t: t.get_axis_scale(),
+            lambda t: t.set_axis_rate(0.0, 0.0),
+            lambda t: t.get_axis_rate(),
+            lambda t: t.clear_pointing_model(),
+            lambda t: t.apply_pointing_model(0.0, 0.0),
+        ],
+    )
+    def test_unimplemented_axis_methods_raise(self, call):
+        assert issubclass(FakeTelescope, TelescopeBase)
+        with pytest.raises(NotImplementedError):
+            call(FakeTelescope())

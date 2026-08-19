@@ -546,3 +546,126 @@ class TelescopeTracking(Telescope):
         @return: None
         @rtype: None
         """
+
+
+class TelescopeAxis(Telescope):
+    """
+    A telescope whose mechanical axis positions can be read directly.
+
+    Sky coordinates are what a mount reports; axis positions are what it
+    actually did. A pointing model is fitted between the two, so a client
+    building one needs the second — unfiltered by whatever transform the
+    mount applies on the way out, and at the resolution the mechanism has
+    rather than the resolution its coordinate replies happen to have.
+
+    Axes are named after Wallace's generic pair (TCSpk): roll and pitch are
+    [-h, dec] on an equatorial and [pi - az, alt] on an altazimuth. Naming
+    them that way keeps either mount type from being built into the
+    interface, which is the same reason TCSpk does it.
+    """
+
+    def get_axis_counts(self) -> tuple[int, int]:
+        """Current mechanical position of both axes, in controller counts.
+
+        Counts are the mount's own integer unit, reported exactly: no
+        rounding, no epoch, no site, no coordinate transform. The zero point
+        is arbitrary and may move across power cycles — a client fitting a
+        pointing model absorbs it into its index terms rather than asking
+        the mount to be honest about it.
+
+        Returns (roll, pitch) counts.
+
+        Raises:
+            NotImplementedError: If the mount cannot report axis position.
+        """
+        raise NotImplementedError()
+
+    def get_axis_scale(self) -> tuple[float, float]:
+        """Arcseconds of axis rotation per count, as (roll, pitch).
+
+        Constant for a given mount. Counts per revolution, if a caller wants
+        it, is 1296000 divided by this.
+        """
+        raise NotImplementedError()
+
+
+class TelescopeAxisRate(Telescope):
+    """
+    A telescope accepting a continuous rate on each mechanical axis.
+
+    The rate is an *addition* to whatever the mount is already doing: a
+    tracking mount given a rate tracks and offsets at once. This is the
+    actuator a closed correction loop drives, and it is a different thing
+    from the timed open-loop nudges of L{TelescopeSlew.move_east} and its
+    siblings, which are offsets rather than rates.
+
+    Units follow ASCOM's RightAscensionRate/DeclinationRate pair, which is
+    the same concept: arcseconds per second, zero meaning plain tracking.
+    Note that ASCOM's MoveAxis is a different thing again, in deg/s.
+    """
+
+    def set_axis_rate(self, roll: float, pitch: float) -> None:
+        """Set a continuous rate on each axis, in arcseconds per second.
+
+        Zero on both axes returns the mount to plain tracking. Resolution
+        and maximum are device specific, and a driver clamps rather than
+        raising, so a control loop should read back with L{get_axis_rate}
+        rather than assume the rate it asked for is the rate it got.
+
+        @param roll: Rate on the roll axis, arcsec/s.
+        @param pitch: Rate on the pitch axis, arcsec/s.
+
+        Raises:
+            NotImplementedError: If the mount cannot accept axis rates.
+        """
+        raise NotImplementedError()
+
+    def get_axis_rate(self) -> tuple[float, float]:
+        """The rates currently in effect, as (roll, pitch) in arcsec/s.
+
+        What the mount is actually doing, after any clamping or
+        quantisation it applied to the last L{set_axis_rate}.
+        """
+        raise NotImplementedError()
+
+
+class TelescopePointingModel(Telescope):
+    """
+    A telescope carrying its own internal pointing model.
+
+    Most mounts keep a table of sync points, interpolate over it, and warp
+    the sky-to-axis map underneath the client. A client fitting its own
+    model needs that switched off, and needs to be able to prove it is off:
+    otherwise it is fitting the residuals of someone else's model, and every
+    statistical judgment it makes about its own is quietly wrong.
+
+    Distinct from L{AlignMode}, which is mount geometry — ASCOM calls that
+    AlignmentMode — and says nothing about a model.
+    """
+
+    def clear_pointing_model(self) -> None:
+        """Discard every alignment point, leaving the model null.
+
+        Raises:
+            NotImplementedError: If the mount has no model to clear.
+        """
+        raise NotImplementedError()
+
+    def apply_pointing_model(self, ra: float, dec: float) -> tuple[float, float]:
+        """Run one coordinate pair through the mount's model, without moving.
+
+        A side-effect-free oracle. Sweep a grid through it and compare
+        against the input: an identity result means the model really is
+        null, which is the only way to check that L{clear_pointing_model}
+        did what it said.
+
+        @param ra: Right ascension, hours.
+        @param dec: Declination, degrees.
+
+        Returns the transformed (ra, dec), in the same units.
+
+        Raises:
+            NotImplementedError: If the mount cannot evaluate its model
+                without slewing.
+        """
+        raise NotImplementedError()

@@ -9,6 +9,7 @@ from chimera.interfaces.telescope import (
     TelescopeAxis,
     TelescopeAxisRate,
     TelescopePark,
+    TelescopePierSide,
     TelescopePointingModel,
     TelescopeSlew,
     TelescopeSync,
@@ -365,7 +366,7 @@ class TelescopeBase(
         # If not, just go on with the instrument's default metadata.
         ra, dec = self.get_position_ra_dec()
         alt, az = self.get_position_alt_az()
-        return [
+        return self._pier_cards() + [
             ("TELESCOP", self["model"], "Telescope Model"),
             ("OPTICS", self["optics"], "Telescope Optics Type"),
             ("MOUNT", self["mount"], "Telescope Mount Type"),
@@ -406,3 +407,40 @@ class TelescopeBase(
             ("CUNIT1", "deg", "units of coordinate value"),
             ("CUNIT2", "deg", "units of coordinate value"),
         ]
+
+    def _pier_cards(self):
+        """`PIERSIDE` and `MNTSIDE`, when the mount can say.
+
+        **Two cards because they are two quantities**, and collapsing them into
+        one is the mistake the ASCOM note (Simpson 2009) exists to prevent:
+
+          `PIERSIDE`  ASCOM's mechanical side, `EAST`/`WEST`.
+          `MNTSIDE`   Wallace's geometric pointing state, `normal`/`beyond`,
+                      which is what decides whether a pointing model reverses
+                      `CH` and `NP` (SPIE 7019 Eqn 24). Lower case, and spelled
+                      the way mirage spells it, so the two projects' frames read
+                      alike.
+
+        A telescope that does not implement `TelescopePier`, or one that answers
+        `UNKNOWN`, contributes no card at all. An absent card is honest; a card
+        saying `normal` because nobody knew is how a survey silently fits one
+        branch to both.
+        """
+        cards = []
+        for call, key, comment in (
+            ("get_pier_side", "PIERSIDE", "Mechanical side of pier (ASCOM)"),
+            ("get_mount_side", "MNTSIDE", "Pointing state (Wallace normal/beyond)"),
+        ):
+            reader = getattr(self, call, None)
+            if reader is None:
+                continue
+            try:
+                value = reader()
+            except Exception:
+                continue
+            # `==`, not `is`: across a bus this is a plain `str`.
+            if value is None or value == TelescopePierSide.UNKNOWN:
+                continue
+            text = str(value)
+            cards.append((key, text.lower() if key == "MNTSIDE" else text, comment))
+        return cards

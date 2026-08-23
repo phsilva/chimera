@@ -23,9 +23,41 @@ class TelescopeStatus(Enum):
 
 
 class TelescopePierSide(Enum):
+    """Which side a German equatorial is on -- in **two different senses**.
+
+    `EAST`/`WEST` is ASCOM's `SideOfPier`: a **mechanical** fact about the
+    tube, and what a mount reports. `NORMAL`/`BEYOND` is Wallace's pointing
+    state (SPIE 7019 §3.5): a **geometric** configuration of the pointing
+    model, defined by `|mechanical declination| > 90°`.
+
+    **They are two quantities wearing one word, and they do not always agree.**
+    The ASCOM note that exists to disentangle them -- Simpson 2009, with
+    Wallace in its acknowledgements -- shows them disagreeing at the same four
+    sky positions. Which of a given mount's mechanical sides is "normal" is a
+    property of *that mount*, so the mapping belongs to each driver and not to
+    this enum: an AM5's `:Gm#` answers `E`/`W` and says nothing about which one
+    a pointing model should call normal.
+
+    Read the mechanical value with `get_pier_side` and the geometric one with
+    `get_mount_side`. A driver that cannot tell returns `UNKNOWN` from either.
+
+    **Compare with `==`, never `is`, and never touch `.value`.** This is a
+    `StrEnum` and chimera's bus serialises with msgspec and no `dec_hook`, so a
+    member that crosses a bus arrives as a plain `str`: `is` fails and `.value`
+    raises. Same-bus calls pass the object by reference, which is the only
+    reason existing `is` assertions pass.
+
+    `NORMAL`/`BEYOND` were appended in 2026-08 and the three original members
+    kept their names and values, so anything reading `EAST`/`WEST` is
+    unaffected. They are appended rather than inserted because the WS codegen
+    emits members in declaration order.
+    """
+
     EAST = "EAST"
     WEST = "WEST"
     UNKNOWN = "UNKNOWN"
+    NORMAL = "NORMAL"
+    BEYOND = "BEYOND"
 
 
 class PositionOutsideLimitsException(ChimeraException):
@@ -328,7 +360,11 @@ class TelescopeSlew(Telescope):
 class TelescopePier(Telescope):
     def get_pier_side(self) -> TelescopePierSide:
         """
-        Get the current side of pier of the telescope.
+        Get the current MECHANICAL side of pier -- ASCOM's SideOfPier.
+
+        This is what the mount reports about its own tube. For the geometric
+        pointing state a model needs, use L{get_mount_side}; the two are
+        different quantities and a mount decides how they relate.
 
         @return: Telescope current pier side: UNKNOWN, EAST or WEST.
         @rtype: L{TelescopePierSide}
@@ -343,6 +379,24 @@ class TelescopePier(Telescope):
 
         @return: Nothing.
         @rtype: None
+        """
+
+    def get_mount_side(self) -> TelescopePierSide:
+        """
+        Get the current GEOMETRIC pointing state -- Wallace's normal/beyond.
+
+        This is the quantity a pointing model means: BEYOND is the
+        beyond-the-pole configuration, |mechanical declination| > 90 degrees,
+        in which Wallace SPIE 7019 Eqn 24 reverses the sign of the collimation
+        and non-perpendicularity terms. NORMAL is the other one.
+
+        Each driver derives it from its own axes, because which mechanical side
+        is "normal" is a property of the mount rather than of this interface. A
+        driver that cannot tell returns UNKNOWN, and callers must treat that as
+        "do not fit a pier-side-dependent term", not as NORMAL.
+
+        @return: Telescope current pointing state: UNKNOWN, NORMAL or BEYOND.
+        @rtype: L{TelescopePierSide}
         """
 
 

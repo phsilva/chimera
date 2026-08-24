@@ -455,6 +455,9 @@ class TestCalibrationFramesComeFromTheSameDetector:
         `sky` would have meant a rig that renders no sky also loses its
         calibration model, for no physical reason.
         """
+        # The 400-700 ADU pedestal and the half-well flat are mirage's detector;
+        # without it the fallback is the old synthetic frame with no bias level.
+        pytest.importorskip("mirage", reason="mirage is not installed")
         manager.add_class(
             FakeCamera,
             "bench",

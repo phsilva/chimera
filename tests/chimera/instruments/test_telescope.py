@@ -3,6 +3,7 @@
 
 
 import logging
+import math
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, wait
@@ -14,7 +15,7 @@ import chimera.core.log
 from chimera.core.exceptions import ChimeraException
 from chimera.instruments.faketelescope import FakeTelescope
 from chimera.instruments.telescope import TelescopeBase, axes
-from chimera.interfaces.telescope import TelescopeStatus
+from chimera.interfaces.telescope import TelescopePierSide, TelescopeStatus
 from chimera.util.coord import Coord
 from chimera.util.position import Epoch, Position
 
@@ -237,6 +238,60 @@ def test_jog_wraps_ra_at_the_clock(monkeypatch):
 
     telescope.move_east(six_minutes)
     assert telescope.get_ra() == pytest.approx(0.05)
+
+
+class TestFakeTelescopePierSide:
+    """FakeTelescope derives both sides from the hour angle instead of
+    reporting UNKNOWN forever: `h < 0` is WEST (the AM5 simulator's rule),
+    WEST is declared NORMAL, and a pin from set_pier_side lasts until the
+    next slew."""
+
+    LST_H = 6.0
+
+    @pytest.fixture
+    def telescope(self, monkeypatch):
+        telescope = FakeTelescope()
+        site = SimpleNamespace(
+            lst_in_rads=lambda: self.LST_H * math.pi / 12.0,
+            ra_dec_to_alt_az=lambda ra, dec: (60.0, 30.0),
+        )
+        monkeypatch.setattr(telescope, "get_site", lambda: site)
+        for event in ("slew_begin", "slew_complete"):
+            monkeypatch.setattr(FakeTelescope, event, lambda *args: None, raising=False)
+        telescope._dec = -30.0
+        return telescope
+
+    def test_west_of_the_meridian_is_west_and_normal(self, telescope):
+        telescope._ra = self.LST_H - 3.0  # h = +3 h: already past the meridian
+        assert telescope.get_pier_side() == TelescopePierSide.EAST
+        assert telescope.get_mount_side() == TelescopePierSide.BEYOND
+
+        telescope._ra = self.LST_H + 3.0  # h = -3 h: still rising
+        assert telescope.get_pier_side() == TelescopePierSide.WEST
+        assert telescope.get_mount_side() == TelescopePierSide.NORMAL
+
+    def test_the_hour_angle_wraps_like_a_clock(self, telescope):
+        telescope._ra = (self.LST_H + 14.0) % 24.0  # h = -14 h, which is +10 h
+        assert telescope.get_pier_side() == TelescopePierSide.EAST
+
+    def test_a_pinned_side_lasts_until_the_next_slew(self, telescope):
+        telescope._ra = self.LST_H + 3.0
+        assert telescope.get_pier_side() == TelescopePierSide.WEST
+
+        telescope.set_pier_side(TelescopePierSide.EAST)
+        assert telescope.get_pier_side() == TelescopePierSide.EAST
+        assert telescope.get_mount_side() == TelescopePierSide.BEYOND
+
+        telescope.move_east(float(Coord.from_h(0.1).to_as()))
+        assert telescope.get_pier_side() == TelescopePierSide.WEST
+
+    def test_without_a_site_the_side_is_unknown(self, telescope, monkeypatch):
+        def no_site():
+            raise RuntimeError("no bus")
+
+        monkeypatch.setattr(telescope, "get_site", no_site)
+        assert telescope.get_pier_side() == TelescopePierSide.UNKNOWN
+        assert telescope.get_mount_side() == TelescopePierSide.UNKNOWN
 
 
 # ---------------------------------------------------------------------------

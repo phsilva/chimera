@@ -39,8 +39,13 @@ CCD = 512
 # `sky_catalog` defaults to None and so keeps NoneType, which is why that one
 # can be nulled.
 
-#: A field with stars in it at the epoch the fixtures use.
+#: A field with stars in it, and the UT instant at which it transits the conftest
+#: site (LST 0.745 h at longitude -48.52; the Sun is 51 deg down). `observatory()`
+#: pins the observatory clock there, so the field is near the zenith whatever the
+#: wall clock says -- before that the suite only passed for a few hours a night,
+#: and failed the rest of the day with ObjectTooLowException.
 RA_H, DEC_D = 0.7457, -22.006
+FIELD_TRANSITS_AT = "2026-08-24 05:48:40"
 
 
 def _catalog():
@@ -82,6 +87,9 @@ def catalog():
 
 def observatory(manager, catalog, **camera_config):
     """A telescope, a focuser and a mirage-backed camera, pointed at stars."""
+    # Site.ut() anchors its simulation clock on the first scaled call, so this
+    # has to land before the telescope starts and reads the sky.
+    manager.get_proxy("/Site/0")["time_start"] = FIELD_TRANSITS_AT
     manager.add_class(FakeTelescope, "tel")
     manager.add_class(FakeFocuser, "foc")
     config = {

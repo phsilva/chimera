@@ -116,6 +116,7 @@ class TelescopeSlew(Telescope):
         @returns: Nothing.
         @rtype: None
         """
+        ...
 
     def slew_to_ra_dec(self, ra: float, dec: float, epoch: float = 2000) -> None:
         """
@@ -133,6 +134,7 @@ class TelescopeSlew(Telescope):
         @returns: Nothing.
         @rtype: None
         """
+        ...
 
     def slew_to_alt_az(self, alt: float, az: float) -> None:
         """
@@ -147,6 +149,7 @@ class TelescopeSlew(Telescope):
         @returns: Nothing.
         @rtype: None
         """
+        ...
 
     def abort_slew(self) -> None:
         """
@@ -155,6 +158,7 @@ class TelescopeSlew(Telescope):
         @return: Nothing.
         @rtype: None
         """
+        ...
 
     def is_slewing(self) -> bool:
         """
@@ -163,6 +167,7 @@ class TelescopeSlew(Telescope):
         @return: True if the telescope is slewing, False otherwise.
         @rtype: bool
         """
+        ...
 
     def move_east(self, offset: float, rate: float | None = None) -> None:
         """
@@ -180,6 +185,7 @@ class TelescopeSlew(Telescope):
 
         @note: float accepted only to make life easier, probably we can't handle such precision.
         """
+        ...
 
     def move_west(self, offset: float, rate: float | None = None) -> None:
         """
@@ -198,6 +204,7 @@ class TelescopeSlew(Telescope):
         @note: float accepted only to make life easier, probably we
         can't handle such precision.
         """
+        ...
 
     def move_north(self, offset: float, rate: float | None = None) -> None:
         """
@@ -216,6 +223,7 @@ class TelescopeSlew(Telescope):
         @note: float accepted only to make life easier, probably we
         can't handle such precision.
         """
+        ...
 
     def move_south(self, offset: float, rate: float | None = None) -> None:
         """
@@ -234,6 +242,7 @@ class TelescopeSlew(Telescope):
         @note: float accepted only to make life easier, probably we
         can't handle such precision.
         """
+        ...
 
     def move_offset(
         self, offset_ra: float, offset_dec: float, rate: float | None
@@ -254,6 +263,7 @@ class TelescopeSlew(Telescope):
         @note: float accepted only to make life easier, probably we
         can't handle such precision.
         """
+        ...
 
     def get_ra(self) -> float:
         """
@@ -262,6 +272,7 @@ class TelescopeSlew(Telescope):
         @return: Telescope's current Right Ascension in hours. ICRS coordinates and current, i.e. NOW, epoch.
         @rtype: float
         """
+        ...
 
     def get_dec(self) -> float:
         """
@@ -270,6 +281,7 @@ class TelescopeSlew(Telescope):
         @return: Telescope's current Declination in degrees. ICRS coordinates and current, i.e. NOW, epoch.
         @rtype: float
         """
+        ...
 
     def get_az(self) -> float:
         """
@@ -278,6 +290,7 @@ class TelescopeSlew(Telescope):
         @return: Telescope's current Azimuth in degrees.
         @rtype: float
         """
+        ...
 
     def get_alt(self) -> float:
         """
@@ -286,6 +299,7 @@ class TelescopeSlew(Telescope):
         @return: Telescope's current Altitude in degrees.
         @rtype: float
         """
+        ...
 
     def get_position_ra_dec(self) -> tuple[float, float]:
         """
@@ -294,6 +308,7 @@ class TelescopeSlew(Telescope):
         @return: Telescope's current position (ra, dec) in hours and degrees. ICRS coordinates and current, i.e. NOW, epoch.
         @rtype: Tuple[float, float]
         """
+        ...
 
     def get_position_alt_az(self) -> tuple[float, float]:
         """
@@ -302,6 +317,7 @@ class TelescopeSlew(Telescope):
         @return: Telescope's current position (alt, az) in degrees. ICRS coordinates and current, i.e. NOW, epoch.
         @rtype: Tuple[float, float]
         """
+        ...
 
     def get_target_ra_dec(self) -> tuple[float, float, float]:
         """
@@ -310,6 +326,7 @@ class TelescopeSlew(Telescope):
         @return: Telescope's current target (ra, dec, epoch) in hours, degrees and epoch in years.
         @rtype: Tuple[float, float, float]
         """
+        ...
 
     def get_target_alt_az(self) -> tuple[float, float]:
         """
@@ -318,6 +335,7 @@ class TelescopeSlew(Telescope):
         @return: Telescope's current target (alt, az) in degrees.
         @rtype: Tuple[float, float]
         """
+        ...
 
     @event
     def slew_begin(self, ra: float, dec: float, epoch: float) -> None:
@@ -335,6 +353,7 @@ class TelescopeSlew(Telescope):
 
         @note: This event is fired when the slew starts, and coordinates are returned as they were received.
         """
+        ...
 
     @event
     def slew_complete(self, ra: float, dec: float, status: TelescopeStatus) -> None:
@@ -355,6 +374,7 @@ class TelescopeSlew(Telescope):
 
         @note: This event is fired when the slew ends, and coordinates are returned as current, i.e. NOW, epoch.
         """
+        ...
 
 
 class TelescopePier(Telescope):
@@ -369,6 +389,7 @@ class TelescopePier(Telescope):
         @return: Telescope current pier side: UNKNOWN, EAST or WEST.
         @rtype: L{TelescopePierSide}
         """
+        ...
 
     def set_pier_side(self, side: TelescopePierSide) -> None:
         """
@@ -380,6 +401,7 @@ class TelescopePier(Telescope):
         @return: Nothing.
         @rtype: None
         """
+        ...
 
     def get_mount_side(self) -> TelescopePierSide:
         """
@@ -398,6 +420,7 @@ class TelescopePier(Telescope):
         @return: Telescope current pointing state: UNKNOWN, NORMAL or BEYOND.
         @rtype: L{TelescopePierSide}
         """
+        ...
 
 
 class TelescopeSync(Telescope):
@@ -413,6 +436,7 @@ class TelescopeSync(Telescope):
         @param name: Object name to sync in.
         @type  name: str
         """
+        ...
 
     def sync_ra_dec(self, ra: float, dec: float, epoch: float = 2000) -> None:
         """
@@ -436,6 +460,7 @@ class TelescopeSync(Telescope):
         @return: Nothing
         @rtype: None
         """
+        ...
 
     @event
     def sync_complete(self, ra: float, dec: float) -> None:
@@ -450,6 +475,7 @@ class TelescopeSync(Telescope):
 
         @note: This event is fired when the sync ends, and coordinates are returned as current, i.e. NOW, epoch.
         """
+        ...
 
 
 class TelescopePark(Telescope):
@@ -471,6 +497,7 @@ class TelescopePark(Telescope):
         @return: Nothing.
         @rtype: None
         """
+        ...
 
     def unpark(self) -> None:
         """
@@ -479,6 +506,7 @@ class TelescopePark(Telescope):
         @return: Nothing.
         @rtype: None
         """
+        ...
 
     def is_parked(self) -> bool:
         """
@@ -487,6 +515,7 @@ class TelescopePark(Telescope):
         @return: True if the telescope is parked, False otherwise.
         @rtype: bool
         """
+        ...
 
     def set_park_position(self, alt: float, az: float) -> None:
         """
@@ -501,6 +530,7 @@ class TelescopePark(Telescope):
         @return: Nothing.
         @rtype: None
         """
+        ...
 
     def get_park_position(self) -> tuple[float, float]:
         """
@@ -509,12 +539,14 @@ class TelescopePark(Telescope):
         @return: Current park position (alt, az) in degrees.
         @rtype: Tuple[float, float]
         """
+        ...
 
     @event
     def park_complete(self) -> None:
         """
         Indicates that the scope has parked successfully.
         """
+        ...
 
     @event
     def unpark_complete(self) -> None:
@@ -522,6 +554,7 @@ class TelescopePark(Telescope):
         Indicates that the scope has unparked (waked up)
         successfully.
         """
+        ...
 
 
 class TelescopeCover(Telescope):
@@ -535,6 +568,7 @@ class TelescopeCover(Telescope):
 
         @return: None
         """
+        ...
 
     def close_cover(self) -> None:
         """
@@ -542,6 +576,7 @@ class TelescopeCover(Telescope):
 
         @return: None
         """
+        ...
 
     def is_cover_open(self) -> bool:
         """
@@ -549,6 +584,7 @@ class TelescopeCover(Telescope):
 
         @return: True if cover is open, false otherwise
         """
+        ...
 
 
 class TelescopeTracking(Telescope):
@@ -563,6 +599,7 @@ class TelescopeTracking(Telescope):
         @return: Nothing
         @rtype: None
         """
+        ...
 
     def stop_tracking(self) -> None:
         """
@@ -571,6 +608,7 @@ class TelescopeTracking(Telescope):
         @return: Nothing.
         @rtype: None
         """
+        ...
 
     def is_tracking(self) -> bool:
         """
@@ -579,12 +617,14 @@ class TelescopeTracking(Telescope):
         @return: True if the telescope is tracking, False otherwise.
         @rtype: bool
         """
+        ...
 
     @event
     def tracking_started(self) -> None:
         """
         Indicates that a tracking operation started.
         """
+        ...
 
     @event
     def tracking_stopped(self, status: TelescopeStatus) -> None:
@@ -600,6 +640,7 @@ class TelescopeTracking(Telescope):
         @return: None
         @rtype: None
         """
+        ...
 
 
 class TelescopeAxis(Telescope):

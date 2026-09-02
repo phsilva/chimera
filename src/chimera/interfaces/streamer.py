@@ -67,6 +67,7 @@ class Streamer(Interface):
         @return: descriptors, possibly empty
         @rtype: list of dict
         """
+        ...
 
     @event
     def streams_changed(self) -> None:
@@ -75,3 +76,4 @@ class Streamer(Interface):
         Liveness only — the set of configured streams does not change at
         runtime. Raised on the edge, not on every poll.
         """
+        ...

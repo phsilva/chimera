@@ -96,10 +96,26 @@ line-length = 88
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["N", "I", "UP", "F"]
+select = ["N", "I", "UP", "F", "ANN"]
 ignore = [
     "UP031", # we have lots of '%' formatted strings yet
+    "ANN401", # Any is deliberate where the wire has no better type
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# ANN is a ratchet on the interfaces only: they are the contract the client is generated from
+"!src/chimera/interfaces/**" = ["ANN"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = "(?i)# SPDX-FileCopyrightText:\\s\\d{4}(-(\\d{4}|present))*"
+
+[tool.ty.src]
+# the rest of the tree is not type-clean yet; widen this as it becomes so
+include = ["src/chimera/interfaces"]
+
+[[tool.ty.overrides]]
+include = ["src/chimera/interfaces/**"]
+
+[tool.ty.overrides.rules]
+# an interface method has no body by definition; its return type is the contract
+empty-body = "ignore"

@@ -103,6 +103,16 @@ class TestSite:
         with pytest.raises(TypeError):
             encoder.encode(site.sunpos())
 
+    def test_site_geometry_accessors_are_plain_numbers(self, manager):
+        """latitude_in_degs() has crossed the bus for years; longitude and
+        altitude now do the same, as floats any client can decode."""
+        site = manager.get_proxy("/Site/0")
+
+        assert site.latitude_in_degs() == pytest.approx(-27.6036, abs=1e-3)
+        assert site.longitude_in_degs() == pytest.approx(-48.5222, abs=1e-3)
+        assert site.altitude_in_m() == 20.0
+        assert isinstance(site.altitude_in_m(), float)
+
     def test_ra_to_ha_is_signed_around_the_meridian(self, manager):
         """HA comes back in [-12, +12), east of the meridian negative, even
         for a right ascension on the other side of the 0/24 h wrap."""

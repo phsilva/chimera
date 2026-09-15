@@ -197,6 +197,12 @@ class Site(ChimeraObject):
     def latitude_in_degs(self):
         return float(self["latitude"].to_d())
 
+    def longitude_in_degs(self):
+        return float(self["longitude"].to_d())
+
+    def altitude_in_m(self):
+        return float(self["altitude"])
+
     def lst(self, date=None):
         """
         Mean Local Sidereal Time
